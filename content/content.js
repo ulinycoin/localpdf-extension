@@ -1,550 +1,467 @@
 /**
- * LocalPDF Extension - Content Script
- * Detects PDFs on web pages and provides quick access to tools
+ * LocalPDF Smart Launcher - Content Script
+ * Handles PDF page detection, floating buttons, and integration with LocalPDF.online
  */
 
-class LocalPDFContentScript {
-    constructor() {
-        this.isInitialized = false;
-        this.pdfElements = new Map();
-        this.observer = null;
-        
-        this.init();
+class SmartLauncherContent {
+  constructor() {
+    this.isInitialized = false;
+    this.floatingButton = null;
+    this.initialize();
+  }
+
+  initialize() {
+    if (this.isInitialized) return;
+    
+    console.log('[LocalPDF Smart Launcher] Content script initialized');
+    
+    // Set up message listener
+    this.setupMessageListener();
+    
+    // Check if this is a PDF page
+    if (this.isPDFPage()) {
+      this.setupPDFPageIntegration();
     }
-
-    /**
-     * Initialize content script
-     */
-    init() {
-        if (this.isInitialized) return;
-        
-        try {
-            console.log('[LocalPDF Content] Initializing on:', window.location.href);
-            
-            // Check if we're on a PDF page
-            if (this.isPDFPage()) {
-                this.setupPDFPageTools();
-            } else {
-                // Scan for PDF links on regular pages
-                this.scanForPDFLinks();
-                this.setupLinkObserver();
-            }
-            
-            // Setup message listener
-            this.setupMessageListener();
-            
-            this.isInitialized = true;
-            console.log('[LocalPDF Content] Content script initialized');
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error initializing:', error);
-        }
+    
+    // Check if this is LocalPDF.online page
+    if (this.isLocalPDFPage()) {
+      this.setupLocalPDFIntegration();
     }
+    
+    // Enhance PDF links on the page
+    this.enhancePDFLinks();
+    
+    this.isInitialized = true;
+  }
 
-    /**
-     * Check if current page is a PDF
-     */
-    isPDFPage() {
-        return (
-            document.contentType === 'application/pdf' ||
-            window.location.pathname.toLowerCase().endsWith('.pdf') ||
-            document.querySelector('embed[type="application/pdf"]') !== null ||
-            document.querySelector('object[type="application/pdf"]') !== null ||
-            document.title.toLowerCase().includes('.pdf')
-        );
+  /**
+   * Check if current page is a PDF
+   */
+  isPDFPage() {
+    return (
+      window.location.href.endsWith('.pdf') ||
+      document.contentType === 'application/pdf' ||
+      document.querySelector('embed[type="application/pdf"]') ||
+      document.querySelector('object[type="application/pdf"]')
+    );
+  }
+
+  /**
+   * Check if current page is LocalPDF.online
+   */
+  isLocalPDFPage() {
+    return window.location.hostname === 'localpdf.online';
+  }
+
+  /**
+   * Set up PDF page integration (floating button)
+   */
+  setupPDFPageIntegration() {
+    console.log('[LocalPDF Smart Launcher] Setting up PDF page integration');
+    
+    // Wait for page to load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        this.createFloatingButton();
+      });
+    } else {
+      this.createFloatingButton();
     }
+  }
 
-    /**
-     * Setup tools for PDF pages
-     */
-    setupPDFPageTools() {
-        try {
-            console.log('[LocalPDF Content] PDF page detected, adding tools');
-            
-            // Create floating action button for PDF pages
-            this.createFloatingButton();
-            
-            // Add keyboard shortcuts
-            this.setupPDFKeyboardShortcuts();
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error setting up PDF page tools:', error);
-        }
+  /**
+   * Create floating button on PDF pages
+   */
+  createFloatingButton() {
+    // Don't create button if already exists
+    if (this.floatingButton) return;
+    
+    const button = document.createElement('div');
+    button.id = 'localpdf-floating-button';
+    button.innerHTML = `
+      <div class="localpdf-btn-content">
+        <img src="${chrome.runtime.getURL('assets/icons/icon16.png')}" alt="LocalPDF" />
+        <span>Process in LocalPDF</span>
+      </div>
+      <div class="localpdf-btn-menu" id="localpdf-btn-menu">
+        <div class="localpdf-menu-item" data-tool="compress">📦 Compress</div>
+        <div class="localpdf-menu-item" data-tool="merge">🔗 Merge</div>
+        <div class="localpdf-menu-item" data-tool="split">✂️ Split</div>
+        <div class="localpdf-menu-item" data-tool="rotate">🔄 Rotate</div>
+        <div class="localpdf-menu-item" data-tool="addtext">📝 Add Text</div>
+        <div class="localpdf-menu-item" data-tool="">🚀 Open LocalPDF</div>
+      </div>
+    `;
+    
+    // Add styles
+    this.addFloatingButtonStyles();
+    
+    // Add event listeners
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleFloatingMenu();
+    });
+    
+    // Handle menu item clicks
+    button.addEventListener('click', (e) => {
+      if (e.target.classList.contains('localpdf-menu-item')) {
+        e.stopPropagation();
+        const tool = e.target.dataset.tool;
+        this.handleFloatingButtonAction(tool);
+      }
+    });
+    
+    // Close menu when clicking outside
+    document.addEventListener('click', () => {
+      this.closeFloatingMenu();
+    });
+    
+    document.body.appendChild(button);
+    this.floatingButton = button;
+    
+    console.log('[LocalPDF Smart Launcher] Floating button created');
+  }
+
+  /**
+   * Add CSS styles for floating button
+   */
+  addFloatingButtonStyles() {
+    if (document.getElementById('localpdf-floating-styles')) return;
+    
+    const styles = document.createElement('style');
+    styles.id = 'localpdf-floating-styles';
+    styles.textContent = `
+      #localpdf-floating-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        background: #2563eb;
+        color: white;
+        border-radius: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        transition: all 0.3s ease;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        font-size: 14px;
+        user-select: none;
+      }
+      
+      #localpdf-floating-button:hover {
+        background: #1d4ed8;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+      }
+      
+      .localpdf-btn-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .localpdf-btn-content img {
+        width: 16px;
+        height: 16px;
+      }
+      
+      .localpdf-btn-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        min-width: 180px;
+        margin-top: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.2s ease;
+        border: 1px solid #e5e7eb;
+      }
+      
+      .localpdf-btn-menu.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+      
+      .localpdf-menu-item {
+        padding: 12px 16px;
+        color: #374151;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      
+      .localpdf-menu-item:last-child {
+        border-bottom: none;
+      }
+      
+      .localpdf-menu-item:hover {
+        background: #f9fafb;
+      }
+      
+      .localpdf-menu-item:first-child {
+        border-radius: 8px 8px 0 0;
+      }
+      
+      .localpdf-menu-item:last-child {
+        border-radius: 0 0 8px 8px;
+      }
+    `;
+    
+    document.head.appendChild(styles);
+  }
+
+  /**
+   * Toggle floating menu visibility
+   */
+  toggleFloatingMenu() {
+    const menu = document.getElementById('localpdf-btn-menu');
+    if (menu) {
+      menu.classList.toggle('show');
     }
+  }
 
-    /**
-     * Create floating action button for PDF pages
-     */
-    createFloatingButton() {
-        // Remove existing button if any
-        const existingButton = document.getElementById('localpdf-floating-btn');
-        if (existingButton) {
-            existingButton.remove();
-        }
-
-        // Create floating button
-        const floatingBtn = document.createElement('div');
-        floatingBtn.id = 'localpdf-floating-btn';
-        floatingBtn.innerHTML = `
-            <div class="localpdf-fab">
-                <img src="${chrome.runtime.getURL('assets/icons/icon48.png')}" alt="LocalPDF">
-                <span class="localpdf-tooltip">LocalPDF Tools</span>
-            </div>
-        `;
-
-        // Add styles
-        const style = document.createElement('style');
-        style.textContent = `
-            #localpdf-floating-btn {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                z-index: 10000;
-                cursor: pointer;
-            }
-            
-            .localpdf-fab {
-                width: 56px;
-                height: 56px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.3s ease;
-                position: relative;
-            }
-            
-            .localpdf-fab:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-            }
-            
-            .localpdf-fab img {
-                width: 32px;
-                height: 32px;
-                filter: brightness(0) invert(1);
-            }
-            
-            .localpdf-tooltip {
-                position: absolute;
-                right: 60px;
-                top: 50%;
-                transform: translateY(-50%);
-                background: rgba(0, 0, 0, 0.8);
-                color: white;
-                padding: 8px 12px;
-                border-radius: 4px;
-                font-size: 12px;
-                white-space: nowrap;
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity 0.3s ease;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            }
-            
-            .localpdf-fab:hover .localpdf-tooltip {
-                opacity: 1;
-            }
-        `;
-
-        // Add to page
-        document.head.appendChild(style);
-        document.body.appendChild(floatingBtn);
-
-        // Add click handler
-        floatingBtn.addEventListener('click', () => {
-            this.openExtensionPopup();
-        });
+  /**
+   * Close floating menu
+   */
+  closeFloatingMenu() {
+    const menu = document.getElementById('localpdf-btn-menu');
+    if (menu) {
+      menu.classList.remove('show');
     }
+  }
 
-    /**
-     * Scan for PDF links on the page
-     */
-    scanForPDFLinks() {
-        try {
-            // Find all links to PDF files
-            const pdfLinks = document.querySelectorAll('a[href*=".pdf"], a[href*=".PDF"]');
-            
-            pdfLinks.forEach(link => {
-                if (!this.pdfElements.has(link)) {
-                    this.enhancePDFLink(link);
-                    this.pdfElements.set(link, true);
-                }
-            });
-
-            console.log(`[LocalPDF Content] Found ${pdfLinks.length} PDF links`);
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error scanning for PDF links:', error);
-        }
+  /**
+   * Handle floating button action
+   */
+  async handleFloatingButtonAction(tool) {
+    this.closeFloatingMenu();
+    
+    try {
+      if (!tool) {
+        // Just open LocalPDF.online
+        window.open('https://localpdf.online?from=extension', '_blank');
+        return;
+      }
+      
+      // Transfer current PDF to LocalPDF.online with specific tool
+      const currentUrl = window.location.href;
+      
+      // For Smart Launcher, we redirect to LocalPDF.online with URL parameter
+      const url = `https://localpdf.online?from=extension&tool=${tool}&url=${encodeURIComponent(currentUrl)}`;
+      window.open(url, '_blank');
+      
+    } catch (error) {
+      console.error('[LocalPDF Smart Launcher] Floating button action failed:', error);
+      // Fallback: open LocalPDF with URL
+      const url = `https://localpdf.online?from=extension&tool=${tool || ''}&url=${encodeURIComponent(window.location.href)}`;
+      window.open(url, '_blank');
     }
+  }
 
-    /**
-     * Enhance PDF links with LocalPDF tools
-     */
-    enhancePDFLink(link) {
-        try {
-            // Add LocalPDF indicator
-            const indicator = document.createElement('span');
-            indicator.className = 'localpdf-link-indicator';
-            indicator.innerHTML = '📄';
-            indicator.title = 'PDF - Right-click for LocalPDF tools';
-            
-            // Style the indicator
-            const style = `
-                margin-left: 4px;
-                font-size: 12px;
-                opacity: 0.7;
-                cursor: pointer;
-            `;
-            indicator.setAttribute('style', style);
-            
-            // Add to link
-            link.appendChild(indicator);
-            
-            // Add right-click context menu enhancement
-            link.addEventListener('contextmenu', (e) => {
-                // The context menu is handled by background script
-                console.log('[LocalPDF Content] Context menu on PDF link:', link.href);
-            });
-            
-            // Add click handler for quick access
-            indicator.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.showPDFLinkMenu(link, e);
-            });
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error enhancing PDF link:', error);
-        }
+  /**
+   * Set up LocalPDF.online page integration
+   */
+  setupLocalPDFIntegration() {
+    console.log('[LocalPDF Smart Launcher] Setting up LocalPDF.online integration');
+    
+    // Check URL parameters for extension launch
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromExtension = urlParams.get('from') === 'extension';
+    const sessionId = urlParams.get('session');
+    const transferMethod = urlParams.get('method');
+    
+    if (fromExtension) {
+      console.log('[LocalPDF Smart Launcher] LocalPDF.online launched from extension');
+      
+      if (sessionId && transferMethod === 'storage') {
+        // Retrieve files from storage
+        this.retrieveFilesFromStorage(sessionId);
+      }
+      
+      // Show extension integration indicator
+      this.showExtensionIntegrationBanner();
     }
+    
+    // Set up message listener for PostMessage transfer
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.source === 'localpdf-extension') {
+        this.handleFilesFromExtension(event.data);
+      }
+    });
+  }
 
-    /**
-     * Show quick menu for PDF links
-     */
-    showPDFLinkMenu(link, event) {
-        try {
-            // Remove existing menu
-            const existingMenu = document.getElementById('localpdf-quick-menu');
-            if (existingMenu) {
-                existingMenu.remove();
-            }
-
-            // Create quick menu
-            const menu = document.createElement('div');
-            menu.id = 'localpdf-quick-menu';
-            menu.innerHTML = `
-                <div class="localpdf-menu-item" data-action="download-and-split">
-                    ✂️ Download & Split
-                </div>
-                <div class="localpdf-menu-item" data-action="download-and-compress">
-                    🗜️ Download & Compress
-                </div>
-                <div class="localpdf-menu-item" data-action="download-and-merge">
-                    🔗 Download & Merge
-                </div>
-            `;
-
-            // Position menu
-            const rect = event.target.getBoundingClientRect();
-            menu.style.cssText = `
-                position: fixed;
-                top: ${rect.bottom + 5}px;
-                left: ${rect.left}px;
-                background: white;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                z-index: 10000;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            `;
-
-            // Style menu items
-            const itemStyle = `
-                padding: 8px 12px;
-                cursor: pointer;
-                font-size: 12px;
-                border-bottom: 1px solid #eee;
-                transition: background 0.2s ease;
-            `;
-
-            menu.querySelectorAll('.localpdf-menu-item').forEach(item => {
-                item.setAttribute('style', itemStyle);
-                
-                item.addEventListener('mouseenter', () => {
-                    item.style.background = '#f5f5f5';
-                });
-                
-                item.addEventListener('mouseleave', () => {
-                    item.style.background = 'white';
-                });
-                
-                item.addEventListener('click', () => {
-                    const action = item.dataset.action;
-                    this.executePDFAction(action, link.href);
-                    menu.remove();
-                });
-            });
-
-            document.body.appendChild(menu);
-
-            // Remove menu when clicking outside
-            setTimeout(() => {
-                document.addEventListener('click', function removeMenu() {
-                    menu.remove();
-                    document.removeEventListener('click', removeMenu);
-                });
-            }, 10);
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error showing PDF link menu:', error);
-        }
+  /**
+   * Retrieve files from Chrome storage
+   */
+  async retrieveFilesFromStorage(sessionId) {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'getStoredFiles',
+        sessionId: sessionId
+      });
+      
+      if (response && response.success) {
+        console.log('[LocalPDF Smart Launcher] Files retrieved from storage');
+        this.processReceivedFiles(response.data);
+      } else {
+        console.warn('[LocalPDF Smart Launcher] Failed to retrieve stored files:', response?.error);
+      }
+      
+    } catch (error) {
+      console.error('[LocalPDF Smart Launcher] Error retrieving stored files:', error);
     }
+  }
 
-    /**
-     * Setup observer for dynamically added content
-     */
-    setupLinkObserver() {
-        try {
-            this.observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            // Check for PDF links in added content
-                            const pdfLinks = node.querySelectorAll ? 
-                                node.querySelectorAll('a[href*=".pdf"], a[href*=".PDF"]') : [];
-                            
-                            pdfLinks.forEach(link => {
-                                if (!this.pdfElements.has(link)) {
-                                    this.enhancePDFLink(link);
-                                    this.pdfElements.set(link, true);
-                                }
-                            });
-                        }
-                    });
-                });
-            });
+  /**
+   * Handle files received from extension (PostMessage)
+   */
+  handleFilesFromExtension(data) {
+    console.log('[LocalPDF Smart Launcher] Files received via PostMessage');
+    this.processReceivedFiles(data);
+  }
 
-            this.observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error setting up observer:', error);
-        }
+  /**
+   * Process received files and integrate with LocalPDF.online
+   */
+  processReceivedFiles(data) {
+    // This would integrate with LocalPDF.online's file handling system
+    // For now, we'll dispatch a custom event that the site can listen to
+    
+    const event = new CustomEvent('localpdf-extension-files', {
+      detail: {
+        files: data.pendingFiles || data.files,
+        targetTool: data.targetTool,
+        sessionId: data.sessionId,
+        transferMethod: data.transferMethod || data.metadata?.transferMethod
+      }
+    });
+    
+    document.dispatchEvent(event);
+    console.log('[LocalPDF Smart Launcher] Files dispatched to LocalPDF.online');
+  }
+
+  /**
+   * Show extension integration banner
+   */
+  showExtensionIntegrationBanner() {
+    const banner = document.createElement('div');
+    banner.id = 'localpdf-extension-banner';
+    banner.innerHTML = `
+      <div style="
+        background: linear-gradient(90deg, #2563eb, #3b82f6);
+        color: white;
+        padding: 12px 24px;
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        font-size: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        position: relative;
+        z-index: 1000;
+      ">
+        🚀 <strong>Launched from LocalPDF Smart Launcher</strong> - Files are ready for processing!
+        <button onclick="this.parentElement.parentElement.remove()" style="
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          margin-left: 12px;
+          cursor: pointer;
+        ">×</button>
+      </div>
+    `;
+    
+    document.body.insertBefore(banner, document.body.firstChild);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      if (banner.parentElement) {
+        banner.remove();
+      }
+    }, 5000);
+  }
+
+  /**
+   * Enhance PDF links on the page
+   */
+  enhancePDFLinks() {
+    const pdfLinks = document.querySelectorAll('a[href$=".pdf"]');
+    
+    pdfLinks.forEach(link => {
+      // Add visual indicator for PDF links
+      if (!link.querySelector('.localpdf-indicator')) {
+        const indicator = document.createElement('span');
+        indicator.className = 'localpdf-indicator';
+        indicator.innerHTML = ' 📄';
+        indicator.title = 'PDF file - Right-click for LocalPDF options';
+        indicator.style.cssText = 'font-size: 12px; opacity: 0.7; margin-left: 4px;';
+        link.appendChild(indicator);
+      }
+    });
+  }
+
+  /**
+   * Set up message listener for background script communication
+   */
+  setupMessageListener() {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log('[LocalPDF Smart Launcher] Content script received message:', request.action);
+      
+      switch (request.action) {
+        case 'transferCurrentPDF':
+          this.handleTransferCurrentPDF(request, sendResponse);
+          return true;
+          
+        case 'receiveFiles':
+          this.handleFilesFromExtension(request);
+          sendResponse({ success: true });
+          return true;
+          
+        default:
+          sendResponse({ success: false, error: 'Unknown action' });
+      }
+    });
+  }
+
+  /**
+   * Handle transfer current PDF request from background script
+   */
+  async handleTransferCurrentPDF(request, sendResponse) {
+    try {
+      if (!this.isPDFPage()) {
+        throw new Error('Current page is not a PDF');
+      }
+      
+      // For PDF pages, we'll redirect to LocalPDF.online with URL parameter
+      const url = `https://localpdf.online?from=extension&tool=${request.tool}&url=${encodeURIComponent(request.url)}`;
+      window.open(url, '_blank');
+      
+      sendResponse({ success: true });
+      
+    } catch (error) {
+      console.error('[LocalPDF Smart Launcher] Transfer current PDF failed:', error);
+      sendResponse({ success: false, error: error.message });
     }
-
-    /**
-     * Setup keyboard shortcuts for PDF pages
-     */
-    setupPDFKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            // Ctrl/Cmd + Shift + L for LocalPDF tools
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
-                e.preventDefault();
-                this.openExtensionPopup();
-            }
-        });
-    }
-
-    /**
-     * Setup message listener for background communication
-     */
-    setupMessageListener() {
-        chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-            try {
-                switch (request.action) {
-                    case 'processPDFOnPage':
-                        this.processPDFOnPage(request, sendResponse);
-                        return true;
-                    
-                    case 'getPDFInfo':
-                        this.getPDFInfo(sendResponse);
-                        return true;
-                    
-                    default:
-                        console.warn('[LocalPDF Content] Unknown action:', request.action);
-                }
-            } catch (error) {
-                console.error('[LocalPDF Content] Error handling message:', error);
-                sendResponse({ success: false, error: error.message });
-            }
-        });
-    }
-
-    /**
-     * Process PDF on current page
-     */
-    async processPDFOnPage(request, sendResponse) {
-        try {
-            const { tool, url } = request;
-            console.log(`[LocalPDF Content] Processing PDF with ${tool}:`, url);
-
-            if (!this.isPDFPage()) {
-                throw new Error('Not a PDF page');
-            }
-
-            // For PDF pages, we can try to get the PDF data
-            const pdfData = await this.getPDFData();
-            
-            // Send back to background for processing
-            sendResponse({ 
-                success: true, 
-                data: pdfData,
-                url: url
-            });
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error processing PDF on page:', error);
-            sendResponse({ success: false, error: error.message });
-        }
-    }
-
-    /**
-     * Get PDF data from current page
-     */
-    async getPDFData() {
-        try {
-            // Try to get PDF from embed/object elements
-            const embed = document.querySelector('embed[type="application/pdf"]');
-            const object = document.querySelector('object[type="application/pdf"]');
-            
-            if (embed && embed.src) {
-                return await this.fetchPDFData(embed.src);
-            } else if (object && object.data) {
-                return await this.fetchPDFData(object.data);
-            } else {
-                // Try to fetch from current URL
-                return await this.fetchPDFData(window.location.href);
-            }
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error getting PDF data:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Fetch PDF data from URL
-     */
-    async fetchPDFData(url) {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch PDF: ${response.statusText}`);
-            }
-            
-            const arrayBuffer = await response.arrayBuffer();
-            return new Uint8Array(arrayBuffer);
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error fetching PDF data:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get PDF info for background
-     */
-    getPDFInfo(sendResponse) {
-        try {
-            const info = {
-                isPDFPage: this.isPDFPage(),
-                url: window.location.href,
-                title: document.title,
-                pdfLinks: this.pdfElements.size
-            };
-            
-            sendResponse({ success: true, info });
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error getting PDF info:', error);
-            sendResponse({ success: false, error: error.message });
-        }
-    }
-
-    /**
-     * Execute PDF action from quick menu
-     */
-    executePDFAction(action, url) {
-        try {
-            console.log(`[LocalPDF Content] Executing ${action} on:`, url);
-            
-            // Send message to background to handle the action
-            chrome.runtime.sendMessage({
-                action: 'executeFromContent',
-                tool: action,
-                url: url
-            });
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error executing PDF action:', error);
-        }
-    }
-
-    /**
-     * Open extension popup (if possible)
-     */
-    openExtensionPopup() {
-        try {
-            // Send message to background to open popup
-            chrome.runtime.sendMessage({
-                action: 'openPopup'
-            });
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error opening popup:', error);
-        }
-    }
-
-    /**
-     * Cleanup when script is destroyed
-     */
-    destroy() {
-        try {
-            if (this.observer) {
-                this.observer.disconnect();
-            }
-            
-            // Remove floating button
-            const floatingBtn = document.getElementById('localpdf-floating-btn');
-            if (floatingBtn) {
-                floatingBtn.remove();
-            }
-            
-            // Remove quick menu
-            const quickMenu = document.getElementById('localpdf-quick-menu');
-            if (quickMenu) {
-                quickMenu.remove();
-            }
-            
-            console.log('[LocalPDF Content] Content script cleaned up');
-            
-        } catch (error) {
-            console.error('[LocalPDF Content] Error during cleanup:', error);
-        }
-    }
+  }
 }
 
 // Initialize content script
-let localPDFContent = null;
+const smartLauncherContent = new SmartLauncherContent();
 
-// Wait for DOM to be ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        localPDFContent = new LocalPDFContentScript();
-    });
-} else {
-    localPDFContent = new LocalPDFContentScript();
-}
-
-// Cleanup on unload
-window.addEventListener('beforeunload', () => {
-    if (localPDFContent) {
-        localPDFContent.destroy();
-    }
-});
+// Reinitialize on navigation (for SPAs)
+let lastUrl = location.href;
+new MutationObserver(() => {
+  const url = location.href;
+  if (url !== lastUrl) {
+    lastUrl = url;
+    // Reinitialize after a short delay
+    setTimeout(() => {
+      smartLauncherContent.initialize();
+    }, 1000);
+  }
+}).observe(document, { subtree: true, childList: true });
