@@ -1,12 +1,13 @@
 /**
  * LocalPDF Extension - Background Service Worker (Manifest V3 Compatible)
- * Handles PDF processing with CSP-compliant fallback system
- * NOW WITH SIMPLIFIED PDF PROCESSOR AS FALLBACK!
+ * Handles PDF processing with enhanced local pdf-lib loading system
+ * NOW WITH LOCAL PDF-LIB CACHING FOR REAL PROCESSING!
  */
 
-// Import both processors
-importScripts('/lib/pdf-processor-real.js');
-importScripts('/lib/pdf-processor-simple.js');
+// Import all processors
+importScripts('/lib/pdf-processor-enhanced.js');  // NEW: Enhanced real processor
+importScripts('/lib/pdf-processor-real.js');      // Original real processor
+importScripts('/lib/pdf-processor-simple.js');    // Simplified processor
 
 // Global PDF processor instance
 let pdfProcessor = null;
@@ -28,38 +29,50 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 /**
- * Initialize PDF processor with graceful fallback
+ * Initialize PDF processor with smart fallback system
  */
 async function initializePDFProcessor() {
     if (!pdfProcessor) {
         try {
-            console.log('[LocalPDF] 🚀 Attempting to initialize REAL PDF processor...');
+            console.log('[LocalPDF] 🚀 Attempting to initialize ENHANCED PDF processor with local pdf-lib...');
             
-            // Try real processor first
-            pdfProcessor = new RealPDFProcessor();
+            // Try enhanced processor first (local pdf-lib loading)
+            pdfProcessor = new EnhancedRealPDFProcessor();
             await pdfProcessor.initialize();
             
-            console.log('[LocalPDF] ✅ SUCCESS: Real PDF processor ready with pdf-lib!');
+            console.log('[LocalPDF] ✅ SUCCESS: Enhanced Real PDF processor ready with locally cached pdf-lib!');
             
-        } catch (realError) {
-            console.warn('[LocalPDF] ⚠️ Real processor failed:', realError.message);
+        } catch (enhancedError) {
+            console.warn('[LocalPDF] ⚠️ Enhanced processor failed:', enhancedError.message);
             
             try {
-                console.log('[LocalPDF] 🔄 Falling back to simplified processor...');
+                console.log('[LocalPDF] 🔄 Trying original real processor...');
                 
-                // Fallback to simplified processor
-                pdfProcessor = new SimplifiedPDFProcessor();
+                // Try original real processor (importScripts)
+                pdfProcessor = new RealPDFProcessor();
                 await pdfProcessor.initialize();
                 
-                console.log('[LocalPDF] ✅ FALLBACK: Simplified PDF processor ready!');
-                console.log('[LocalPDF] ℹ️ Note: Using basic PDF operations (no external libraries)');
+                console.log('[LocalPDF] ✅ FALLBACK 1: Original Real PDF processor ready with pdf-lib!');
                 
-            } catch (fallbackError) {
-                console.error('[LocalPDF] ❌ CRITICAL: Both processors failed:', fallbackError);
+            } catch (realError) {
+                console.warn('[LocalPDF] ⚠️ Original real processor failed:', realError.message);
                 
-                // Last resort: demo processor
-                pdfProcessor = new DemoPDFProcessor();
-                console.log('[LocalPDF] ⚠️ DEMO MODE: Using minimal processor');
+                try {
+                    console.log('[LocalPDF] 🔄 Falling back to simplified processor...');
+                    
+                    // Fallback to simplified processor
+                    pdfProcessor = new SimplifiedPDFProcessor();
+                    await pdfProcessor.initialize();
+                    
+                    console.log('[LocalPDF] ✅ FALLBACK 2: Simplified PDF processor ready!');
+                    
+                } catch (fallbackError) {
+                    console.error('[LocalPDF] ❌ All processors failed:', fallbackError);
+                    
+                    // Last resort: demo processor
+                    pdfProcessor = new DemoPDFProcessor();
+                    console.log('[LocalPDF] ⚠️ FALLBACK 3: Using minimal demo processor');
+                }
             }
         }
     }
@@ -74,45 +87,38 @@ class DemoPDFProcessor {
         this.isInitialized = true;
     }
 
-    async initialize() {
-        return true;
-    }
+    async initialize() { return true; }
 
     async mergePDFs(files) {
-        console.log('[LocalPDF] Demo merge - returning first file');
         const arrayBuffer = await this.fileToArrayBuffer(files[0]);
         return {
             success: true,
             data: new Uint8Array(arrayBuffer),
             fileName: 'demo-merged.pdf',
-            message: 'Demo mode: Using first file as result'
+            message: 'Demo mode: Using first file'
         };
     }
 
     async splitPDF(file) {
-        console.log('[LocalPDF] Demo split - creating 3 copies');
         const arrayBuffer = await this.fileToArrayBuffer(file);
         const data = new Uint8Array(arrayBuffer);
-        
         return {
             success: true,
             files: [
                 { data, fileName: `demo-page-1.pdf`, pageNumber: 1 },
-                { data, fileName: `demo-page-2.pdf`, pageNumber: 2 },
-                { data, fileName: `demo-page-3.pdf`, pageNumber: 3 }
+                { data, fileName: `demo-page-2.pdf`, pageNumber: 2 }
             ],
-            message: 'Demo mode: Created 3 copies'
+            message: 'Demo mode: Created copies'
         };
     }
 
     async compressPDF(file) {
-        console.log('[LocalPDF] Demo compress - returning original');
         const arrayBuffer = await this.fileToArrayBuffer(file);
         return {
             success: true,
             data: new Uint8Array(arrayBuffer),
             fileName: 'demo-compressed.pdf',
-            message: 'Demo mode: File returned unchanged'
+            message: 'Demo mode: File unchanged'
         };
     }
 
@@ -125,14 +131,11 @@ class DemoPDFProcessor {
         });
     }
 
-    async validatePDF(file) {
-        return true;
-    }
+    async validatePDF(file) { return true; }
 
     async downloadPDF(pdfBytes, fileName) {
         const base64String = this.uint8ArrayToBase64(pdfBytes);
         const dataUrl = `data:application/pdf;base64,${base64String}`;
-        
         return await chrome.downloads.download({
             url: dataUrl,
             filename: fileName,
@@ -142,8 +145,7 @@ class DemoPDFProcessor {
 
     uint8ArrayToBase64(uint8Array) {
         let binary = '';
-        const len = uint8Array.byteLength;
-        for (let i = 0; i < len; i++) {
+        for (let i = 0; i < uint8Array.byteLength; i++) {
             binary += String.fromCharCode(uint8Array[i]);
         }
         return btoa(binary);
@@ -162,7 +164,9 @@ class DemoPDFProcessor {
  * Get processor type for user notification
  */
 function getProcessorType() {
-    if (pdfProcessor instanceof RealPDFProcessor) {
+    if (pdfProcessor instanceof EnhancedRealPDFProcessor) {
+        return 'ENHANCED REAL PROCESSING (local pdf-lib)';
+    } else if (pdfProcessor instanceof RealPDFProcessor) {
         return 'REAL PROCESSING (pdf-lib)';
     } else if (pdfProcessor instanceof SimplifiedPDFProcessor) {
         return 'BASIC PROCESSING (simplified)';
@@ -172,7 +176,7 @@ function getProcessorType() {
 }
 
 /**
- * First time installation setup
+ * Setup and utility functions
  */
 async function setupFirstTimeInstallation() {
     try {
@@ -184,44 +188,32 @@ async function setupFirstTimeInstallation() {
                 compressionQuality: 'medium',
                 notifications: true,
                 shortcuts: true,
-                useRealProcessor: true,
-                processorType: 'auto' // auto, real, simplified, demo
+                useEnhancedProcessor: true,
+                processorType: 'auto'
             }
         });
 
         setupContextMenus();
-        showNotification('Welcome', 'LocalPDF extension installed! Initializing PDF processing...');
-
-        console.log('[LocalPDF] First time setup completed');
+        showNotification('Welcome', 'LocalPDF extension installed! Now with enhanced PDF processing!');
     } catch (error) {
         console.error('[LocalPDF] Error during first time setup:', error);
     }
 }
 
-/**
- * Handle extension updates
- */
 async function handleExtensionUpdate(previousVersion) {
     try {
-        console.log(`[LocalPDF] Updated from ${previousVersion} to 0.1.0`);
-        
         const settings = await chrome.storage.sync.get(['localPDFSettings']);
         if (settings.localPDFSettings) {
             settings.localPDFSettings.version = '0.1.0';
-            settings.localPDFSettings.processorType = 'auto';
+            settings.localPDFSettings.useEnhancedProcessor = true;
             await chrome.storage.sync.set(settings);
         }
-
-        showNotification('Updated', 'LocalPDF updated with improved PDF processing!');
-
+        showNotification('Updated', 'LocalPDF updated with enhanced processing!');
     } catch (error) {
         console.error('[LocalPDF] Error during update:', error);
     }
 }
 
-/**
- * Initialize extension on startup
- */
 async function initializeExtension() {
     try {
         setupContextMenus();
@@ -235,9 +227,6 @@ async function initializeExtension() {
     }
 }
 
-/**
- * Setup context menus for PDF files
- */
 function setupContextMenus() {
     chrome.contextMenus.removeAll(() => {
         chrome.contextMenus.create({
@@ -253,19 +242,9 @@ function setupContextMenus() {
             title: 'Download and Compress',
             contexts: ['link']
         });
-
-        chrome.contextMenus.create({
-            id: 'localpdf-merge',
-            parentId: 'localpdf-main',
-            title: 'Merge PDFs',
-            contexts: ['page']
-        });
     });
 }
 
-/**
- * Setup message handlers for popup communication
- */
 function setupMessageHandlers() {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.log('[LocalPDF] Received message:', request.action);
@@ -291,8 +270,13 @@ function setupMessageHandlers() {
                 sendResponse({ 
                     success: true, 
                     processorType: getProcessorType(),
-                    isReal: pdfProcessor instanceof RealPDFProcessor
+                    isEnhanced: pdfProcessor instanceof EnhancedRealPDFProcessor,
+                    isReal: pdfProcessor instanceof RealPDFProcessor || pdfProcessor instanceof EnhancedRealPDFProcessor
                 });
+                return true;
+
+            case 'clearPDFLibCache':
+                handleClearPDFLibCache(sendResponse);
                 return true;
 
             case 'openPopup':
@@ -312,7 +296,7 @@ function setupMessageHandlers() {
 }
 
 /**
- * Handle tool execution with files from popup - WITH SMART FALLBACK!
+ * Handle tool execution with files from popup - WITH ENHANCED PROCESSING!
  */
 async function handleToolExecution(request, sendResponse) {
     try {
@@ -358,7 +342,7 @@ async function handleToolExecution(request, sendResponse) {
                 console.log(`[LocalPDF] 🔗 Starting ${processorType} merge...`);
                 result = await processor.mergePDFs(processedFiles);
                 if (result.success) {
-                    console.log(`[LocalPDF] ✅ Merge successful!`);
+                    console.log(`[LocalPDF] ✅ Merge successful! Pages: ${result.totalPages || 'N/A'}`);
                     downloadPromise = processor.downloadPDF(result.data, result.fileName);
                 }
                 break;
@@ -431,7 +415,6 @@ async function handleToolExecutionOnPage(request, sendResponse) {
 
         showNotification('Processing', `Processing PDF with ${tool} using ${processorType}...`);
         
-        // Download the PDF from the page
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`Failed to download PDF: ${response.statusText}`);
@@ -510,13 +493,29 @@ async function handleDownloadAndProcess(url, tool) {
                 : '!';
                 
             console.log(`[LocalPDF] ✅ Context menu processing successful${reductionText}`);
+            showNotification('Success', `✅ ${processorType}: ${tool} completed${reductionText}`);
         }
-
-        showNotification('Success', `✅ ${processorType}: ${tool} completed${reductionText}`);
 
     } catch (error) {
         console.error(`[LocalPDF] Error in download and process:`, error);
         showNotification('Error', `❌ Failed to process: ${error.message}`);
+    }
+}
+
+/**
+ * Handle clearing PDF-lib cache
+ */
+async function handleClearPDFLibCache(sendResponse) {
+    try {
+        if (pdfProcessor instanceof EnhancedRealPDFProcessor && pdfProcessor.loader) {
+            await pdfProcessor.loader.clearCache();
+            sendResponse({ success: true, message: 'PDF-lib cache cleared' });
+        } else {
+            sendResponse({ success: false, error: 'Enhanced processor not available' });
+        }
+    } catch (error) {
+        console.error('[LocalPDF] Error clearing cache:', error);
+        sendResponse({ success: false, error: error.message });
     }
 }
 
@@ -563,5 +562,5 @@ async function handleSaveSettings(settings, sendResponse) {
 }
 
 // Initialize extension when script loads
-console.log('[LocalPDF] 🚀 Background script loaded - PDF processing with smart fallback enabled!');
+console.log('[LocalPDF] 🚀 Background script loaded - Enhanced PDF processing with local caching enabled!');
 initializeExtension();
