@@ -8,6 +8,7 @@ console.log('[LocalPDF] 🚀 Smart Launcher Background Script Loaded - v1.0.0');
 
 class LocalPDFSmartLauncher {
   constructor() {
+    this.maxFileSize = 50 * 1024 * 1024; // 50MB limit
     this.initialize();
   }
 
