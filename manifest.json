@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LocalPDF Smart Launcher",
-  "version": "0.1.0",
-  "description": "Quick access to LocalPDF.online - seamlessly transfer PDF files to the privacy-focused PDF toolkit. Right-click any PDF to get started.",
+  "version": "1.0.0",
+  "description": "Quick access to LocalPDF.online - seamlessly transfer PDFs to privacy-focused tools. Right-click any PDF to get started.",
   
   "permissions": [
     "contextMenus",
@@ -40,5 +40,9 @@
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png", 
     "128": "assets/icons/icon128.png"
-  }
+  },
+
+  "author": "LocalPDF Team",
+  "homepage_url": "https://localpdf.online",
+  "short_name": "LocalPDF"
 }
