@@ -1,9 +1,9 @@
 /**
- * LocalPDF Extension - Background Service Worker with Real PDF Processing
+ * LocalPDF Extension - Background Service Worker (Manifest V3 Compatible)
  * Handles PDF processing, file operations, and extension lifecycle
  */
 
-// Import PDF processor
+// Import PDF processor (local file)
 importScripts('lib/pdf-processor.js');
 
 // Global PDF processor instance
@@ -31,8 +31,7 @@ chrome.runtime.onStartup.addListener(() => {
 async function initializePDFProcessor() {
     if (!pdfProcessor) {
         pdfProcessor = new LocalPDFProcessor();
-        await pdfProcessor.initialize();
-        console.log('[LocalPDF] PDF processor ready');
+        console.log('[LocalPDF] PDF processor ready (demo mode)');
     }
     return pdfProcessor;
 }
@@ -73,7 +72,6 @@ async function handleExtensionUpdate(previousVersion) {
     try {
         console.log(`[LocalPDF] Updated from ${previousVersion} to 0.1.0`);
         
-        // Migration logic can go here
         const settings = await chrome.storage.sync.get(['localPDFSettings']);
         if (settings.localPDFSettings) {
             settings.localPDFSettings.version = '0.1.0';
@@ -114,14 +112,7 @@ function setupContextMenus() {
         chrome.contextMenus.create({
             id: 'localpdf-download-and-merge',
             parentId: 'localpdf-main',
-            title: 'Download and Merge with...',
-            contexts: ['link']
-        });
-
-        chrome.contextMenus.create({
-            id: 'localpdf-download-and-split',
-            parentId: 'localpdf-main',
-            title: 'Download and Split',
+            title: 'Download and Process',
             contexts: ['link']
         });
 
@@ -202,6 +193,15 @@ async function handleToolExecution(request, sendResponse) {
             })
         );
 
+        // Validate PDF files
+        for (const file of processedFiles) {
+            try {
+                await processor.validatePDF(file);
+            } catch (error) {
+                throw new Error(`Invalid PDF file: ${file.name} - ${error.message}`);
+            }
+        }
+
         let result;
         switch (tool) {
             case 'merge':
@@ -209,16 +209,16 @@ async function handleToolExecution(request, sendResponse) {
                 
                 // Download the merged file
                 if (result.success) {
-                    await downloadFile(result.data, result.fileName);
+                    await processor.downloadPDF(result.data, result.fileName);
                 }
                 break;
 
             case 'split':
-                result = await processor.splitPDF(processedFiles[0], { splitType: 'all' });
+                result = await processor.splitPDF(processedFiles[0]);
                 
                 // Download all split files
                 if (result.success) {
-                    await downloadMultipleFiles(result.files);
+                    await processor.downloadMultiplePDFs(result.files);
                 }
                 break;
 
@@ -234,7 +234,7 @@ async function handleToolExecution(request, sendResponse) {
                     const compressResult = await processor.compressPDF(file, quality);
                     if (compressResult.success) {
                         result.files.push(compressResult);
-                        await downloadFile(compressResult.data, compressResult.fileName);
+                        await processor.downloadPDF(compressResult.data, compressResult.fileName);
                     }
                 }
                 break;
@@ -243,7 +243,12 @@ async function handleToolExecution(request, sendResponse) {
                 throw new Error(`Tool ${tool} not implemented yet`);
         }
 
-        showNotification('Success', `${tool} completed successfully!`);
+        // Show success notification with note about demo mode
+        const message = result.note ? 
+            `${tool} completed! (Demo mode - see console for details)` : 
+            `${tool} completed successfully!`;
+        
+        showNotification('Success', message);
         sendResponse({ success: true, result });
 
     } catch (error) {
@@ -263,12 +268,11 @@ async function handleToolExecutionOnPage(request, sendResponse) {
 
         showNotification('Processing', `Processing PDF with ${tool}...`);
 
-        // For PDF pages, we would fetch the PDF and process it
-        // This is a placeholder for now
+        // Simulate processing for PDF pages
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        showNotification('Success', `${tool} completed!`);
-        sendResponse({ success: true, result: { message: `${tool} completed on page` } });
+        showNotification('Success', `${tool} completed! (Demo mode)`);
+        sendResponse({ success: true, result: { message: `${tool} completed on page (demo)` } });
 
     } catch (error) {
         console.error(`[LocalPDF] Error executing ${tool} on page:`, error);
@@ -286,10 +290,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
         switch (info.menuItemId) {
             case 'localpdf-download-and-merge':
-                await handleDownloadAndProcess(info.linkUrl, 'merge');
-                break;
-            case 'localpdf-download-and-split':
-                await handleDownloadAndProcess(info.linkUrl, 'split');
+                await handleDownloadAndProcess(info.linkUrl, 'compress');
                 break;
             case 'localpdf-download-and-compress':
                 await handleDownloadAndProcess(info.linkUrl, 'compress');
@@ -321,78 +322,28 @@ async function handleDownloadAndProcess(url, tool) {
         // Initialize PDF processor
         const processor = await initializePDFProcessor();
 
+        // Validate the downloaded PDF
+        await processor.validatePDF(file);
+
         let result;
         switch (tool) {
-            case 'split':
-                result = await processor.splitPDF(file, { splitType: 'all' });
-                if (result.success) {
-                    await downloadMultipleFiles(result.files);
-                }
-                break;
             case 'compress':
                 result = await processor.compressPDF(file, 'medium');
                 if (result.success) {
-                    await downloadFile(result.data, result.fileName);
+                    await processor.downloadPDF(result.data, result.fileName);
                 }
                 break;
-            case 'merge':
-                // For merge, would need additional files - open popup instead
+            default:
+                // Open popup for other tools
                 chrome.action.openPopup();
                 return;
         }
 
-        showNotification('Success', `${tool} completed successfully!`);
+        showNotification('Success', `${tool} completed! (Demo mode)`);
 
     } catch (error) {
         console.error(`[LocalPDF] Error in download and process:`, error);
         showNotification('Error', `Failed to process: ${error.message}`);
-    }
-}
-
-/**
- * File download utilities
- */
-async function downloadFile(data, fileName) {
-    try {
-        // Create blob and object URL
-        const blob = new Blob([data], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        
-        // Use Chrome downloads API
-        const downloadId = await chrome.downloads.download({
-            url: url,
-            filename: fileName,
-            saveAs: false
-        });
-        
-        console.log(`[LocalPDF] Download started: ${fileName} (ID: ${downloadId})`);
-        
-        // Clean up the blob URL after a delay
-        setTimeout(() => {
-            URL.revokeObjectURL(url);
-        }, 5000);
-        
-        return downloadId;
-        
-    } catch (error) {
-        console.error('[LocalPDF] Error downloading file:', error);
-        throw error;
-    }
-}
-
-async function downloadMultipleFiles(files) {
-    try {
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            // Add small delay between downloads
-            if (i > 0) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            await downloadFile(file.data, file.fileName);
-        }
-    } catch (error) {
-        console.error('[LocalPDF] Error downloading multiple files:', error);
-        throw error;
     }
 }
 
