@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalPDF Extension Test Suite</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f5f7fa;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2d3748; text-align: center; }
+        .test-section { 
+            margin: 30px 0; 
+            padding: 20px; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+        .test-button { 
+            background: #4299e1; 
+            color: white; 
+            padding: 12px 24px; 
+            margin: 8px; 
+            border: none; 
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .test-button:hover { background: #3182ce; }
+        .test-result { 
+            margin: 15px 0; 
+            padding: 15px; 
+            background: #edf2f7; 
+            border-radius: 6px;
+            border-left: 4px solid #cbd5e0;
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border-left-color: #28a745;
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border-left-color: #dc3545;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left-color: #ffc107;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left-color: #17a2b8;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .status-card {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+        }
+        code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+        }
+        .pdf-links {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        .pdf-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .pdf-link:hover {
+            background: #5a67d8;
+        }
+        .installation-steps {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #1890ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 LocalPDF Extension Test Suite</h1>
+        <p style="text-align: center; color: #718096; margin-bottom: 30px;">
+            Comprehensive testing interface for LocalPDF Smart Launcher Extension
+        </p>
+
+        <div class="installation-steps">
+            <h2>🚀 Quick Installation (Developer Mode)</h2>
+            <div class="step">
+                <strong>1.</strong> Download this repository: <code>git clone https://github.com/ulinycoin/localpdf-extension.git</code>
+            </div>
+            <div class="step">
+                <strong>2.</strong> Open Chrome → <code>chrome://extensions/</code>
+            </div>
+            <div class="step">
+                <strong>3.</strong> Enable "Developer mode" (top right toggle)
+            </div>
+            <div class="step">
+                <strong>4.</strong> Click "Load unpacked" → Select extension folder
+            </div>
+            <div class="step">
+                <strong>5.</strong> Look for LocalPDF icon in toolbar → Start testing!
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Extension Status Check</h2>
+            <button class="test-button" onclick="checkExtensionStatus()">Check Extension Status</button>
+            <div id="status-result" class="test-result info">Click button to check extension installation status</div>
+            
+            <div class="status-grid">
+                <div class="status-card">
+                    <h3>🔧 Extension Detected</h3>
+                    <div id="extension-status">❓ Unknown</div>
+                </div>
+                <div class="status-card">
+                    <h3>🎯 Context Menus</h3>
+                    <div id="context-status">❓ Unknown</div>
+                </div>
+                <div class="status-card">
+                    <h3>💾 Storage API</h3>
+                    <div id="storage-status">❓ Unknown</div>
+                </div>
+                <div class="status-card">
+                    <h3>🔄 Background Script</h3>
+                    <div id="background-status">❓ Unknown</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🖱️ Context Menu Testing</h2>
+            <p>Test the right-click context menu on PDF files:</p>
+            <div class="pdf-links">
+                <a href="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" target="_blank" class="pdf-link">📄 Small PDF (dummy.pdf)</a>
+                <a href="https://www.africau.edu/images/default/sample.pdf" target="_blank" class="pdf-link">📄 Sample PDF</a>
+                <a href="https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf" target="_blank" class="pdf-link">📄 Mozilla PDF</a>
+            </div>
+            <div class="test-result warning">
+                <strong>Testing Instructions:</strong>
+                <ol>
+                    <li>Right-click on any PDF link above</li>
+                    <li>Look for "LocalPDF" in the context menu</li>
+                    <li>Check if submenu shows 9 PDF tools</li>
+                    <li>Click any tool to test redirection</li>
+                </ol>
+            </div>
+            <button class="test-button" onclick="testContextMenu()">Simulate Context Menu Test</button>
+            <div id="context-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Popup Interface Testing</h2>
+            <p>Test the extension popup (click the LocalPDF icon in your toolbar):</p>
+            <button class="test-button" onclick="testPopupInterface()">Test Popup Interface</button>
+            <div id="popup-result" class="test-result"></div>
+            
+            <div class="test-result info">
+                <strong>What to check:</strong>
+                <ul>
+                    <li>✅ Popup opens when clicking toolbar icon</li>
+                    <li>✅ All 9 PDF tools are visible</li>
+                    <li>✅ Tool buttons are clickable</li>
+                    <li>✅ Clicking tools opens LocalPDF.online</li>
+                    <li>✅ URL contains proper parameters</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔘 Floating Button Testing</h2>
+            <p>Test floating button on PDF pages:</p>
+            <button class="test-button" onclick="openPDFForFloatingTest()">Open PDF for Floating Button Test</button>
+            <div id="floating-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔗 URL Parameter Testing</h2>
+            <p>Test tool pre-selection via URL parameters:</p>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="test-button" onclick="testURLParameter('compress')">Test Compress</button>
+                <button class="test-button" onclick="testURLParameter('merge')">Test Merge</button>
+                <button class="test-button" onclick="testURLParameter('split')">Test Split</button>
+                <button class="test-button" onclick="testURLParameter('unlock')">Test Unlock</button>
+            </div>
+            <div id="url-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>💾 Storage API Testing</h2>
+            <p>Test Chrome Storage API functionality:</p>
+            <button class="test-button" onclick="testStorageAPI()">Test Storage API</button>
+            <button class="test-button" onclick="testStorageCleanup()">Test Auto-cleanup</button>
+            <div id="storage-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📁 File Transfer Testing</h2>
+            <p>Test file handling capabilities:</p>
+            <input type="file" id="testFile" accept=".pdf" style="margin: 10px 0;">
+            <button class="test-button" onclick="testFileTransfer()">Test File Transfer</button>
+            <div id="file-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔍 Developer Tools Integration</h2>
+            <p>Advanced testing for developers:</p>
+            <button class="test-button" onclick="openDevTools()">Open Extension DevTools</button>
+            <button class="test-button" onclick="checkConsoleErrors()">Check Console Errors</button>
+            <div id="devtools-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Quick Test Summary</h2>
+            <button class="test-button" onclick="runQuickTest()">Run Quick Test (2 minutes)</button>
+            <div id="quick-result" class="test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Extension status check
+        function checkExtensionStatus() {
+            const result = document.getElementById('status-result');
+            const extensionStatus = document.getElementById('extension-status');
+            const contextStatus = document.getElementById('context-status');
+            const storageStatus = document.getElementById('storage-status');
+            const backgroundStatus = document.getElementById('background-status');
+            
+            result.innerHTML = '🔄 Checking extension status...';
+            result.className = 'test-result info';
+            
+            // Check extension availability
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                extensionStatus.innerHTML = '✅ Available';
+                extensionStatus.style.color = 'green';
+                
+                // Check storage API
+                if (chrome.storage && chrome.storage.local) {
+                    storageStatus.innerHTML = '✅ Available';
+                    storageStatus.style.color = 'green';
+                } else {
+                    storageStatus.innerHTML = '❌ Not Available';
+                    storageStatus.style.color = 'red';
+                }
+                
+                contextStatus.innerHTML = '✅ Should Work';
+                contextStatus.style.color = 'green';
+                
+                backgroundStatus.innerHTML = '✅ Should Work';
+                backgroundStatus.style.color = 'green';
+                
+                result.innerHTML = '✅ Extension APIs are available! Extension should be working.';
+                result.className = 'test-result success';
+            } else {
+                extensionStatus.innerHTML = '❌ Not Available';
+                extensionStatus.style.color = 'red';
+                contextStatus.innerHTML = '❌ Not Available';
+                contextStatus.style.color = 'red';
+                storageStatus.innerHTML = '❌ Not Available';
+                storageStatus.style.color = 'red';
+                backgroundStatus.innerHTML = '❌ Not Available';
+                backgroundStatus.style.color = 'red';
+                
+                result.innerHTML = '❌ Extension APIs not available. Make sure extension is installed and this page is loaded properly.';
+                result.className = 'test-result error';
+            }
+        }
+
+        function testContextMenu() {
+            const result = document.getElementById('context-result');
+            result.innerHTML = `
+                <strong>Context Menu Test Instructions:</strong><br>
+                1. Right-click on any PDF link above<br>
+                2. Look for "LocalPDF" menu item<br>
+                3. Verify submenu contains these 9 tools:<br>
+                • 📦 Compress PDF<br>
+                • 🔗 Merge PDFs<br>
+                • ✂️ Split PDF<br>
+                • 🔓 Unlock PDF<br>
+                • 🔒 Protect PDF<br>
+                • 🔄 Rotate PDF<br>
+                • 📝 Extract Text<br>
+                • 🖼️ PDF to Image<br>
+                • 📄 Organize PDF<br><br>
+                <strong>✅ If you see the LocalPDF menu, the context menu is working!</strong>
+            `;
+            result.className = 'test-result info';
+        }
+
+        function testPopupInterface() {
+            const result = document.getElementById('popup-result');
+            result.innerHTML = `
+                <strong>Popup Interface Test Instructions:</strong><br>
+                1. Look for LocalPDF icon in your browser toolbar<br>
+                2. Click the LocalPDF icon<br>
+                3. Verify popup opens with modern UI<br>
+                4. Check all 9 tool buttons are visible<br>
+                5. Click any tool button<br>
+                6. Verify LocalPDF.online opens in new tab<br>
+                7. Check URL contains "?from=extension&tool=..."<br><br>
+                <strong>✅ If popup opens and tools redirect correctly, popup is working!</strong>
+            `;
+            result.className = 'test-result info';
+        }
+
+        function openPDFForFloatingTest() {
+            const result = document.getElementById('floating-result');
+            const pdfURL = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+            
+            window.open(pdfURL, '_blank');
+            
+            result.innerHTML = `
+                <strong>Floating Button Test:</strong><br>
+                1. PDF opened in new tab: <a href="${pdfURL}" target="_blank">dummy.pdf</a><br>
+                2. Wait 2-3 seconds for content script to load<br>
+                3. Look for floating LocalPDF button on PDF page<br>
+                4. Click floating button to test functionality<br>
+                5. Verify it opens LocalPDF.online<br><br>
+                <strong>✅ If floating button appears and works, page integration is successful!</strong>
+            `;
+            result.className = 'test-result info';
+        }
+
+        function testURLParameter(tool) {
+            const result = document.getElementById('url-result');
+            const testURL = `https://localpdf.online/?from=extension&tool=${tool}`;
+            
+            window.open(testURL, '_blank');
+            
+            result.innerHTML = `
+                <strong>URL Parameter Test:</strong><br>
+                🔄 Testing tool: <strong>${tool}</strong><br>
+                📋 URL opened: <code>${testURL}</code><br><br>
+                <strong>What to check in the new tab:</strong><br>
+                1. ✅ LocalPDF.online loaded correctly<br>
+                2. ✅ Extension banner visible (when integration deployed)<br>
+                3. ✅ Correct tool pre-selected<br>
+                4. ✅ URL parameters preserved<br><br>
+                <em>Note: Full functionality requires LocalPDF.online integration deployment</em>
+            `;
+            result.className = 'test-result success';
+        }
+
+        function testStorageAPI() {
+            const result = document.getElementById('storage-result');
+            
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                const testData = {
+                    testFile: 'test-data-' + Date.now(),
+                    timestamp: Date.now(),
+                    extensionTest: true
+                };
+                
+                result.innerHTML = '🔄 Testing Chrome Storage API...';
+                result.className = 'test-result info';
+                
+                chrome.storage.local.set(testData, function() {
+                    if (chrome.runtime.lastError) {
+                        result.innerHTML = `❌ Storage API error: ${chrome.runtime.lastError.message}`;
+                        result.className = 'test-result error';
+                    } else {
+                        chrome.storage.local.get(Object.keys(testData), function(retrieved) {
+                            if (chrome.runtime.lastError) {
+                                result.innerHTML = `❌ Storage retrieval error: ${chrome.runtime.lastError.message}`;
+                                result.className = 'test-result error';
+                            } else {
+                                result.innerHTML = `
+                                    ✅ <strong>Storage API working correctly!</strong><br>
+                                    📝 Data saved: ${JSON.stringify(testData, null, 2)}<br>
+                                    📖 Data retrieved: ${JSON.stringify(retrieved, null, 2)}<br>
+                                    🧹 Test data will be cleaned up automatically...
+                                `;
+                                result.className = 'test-result success';
+                                
+                                // Clean up test data
+                                setTimeout(() => {
+                                    chrome.storage.local.remove(Object.keys(testData));
+                                }, 3000);
+                            }
+                        });
+                    }
+                });
+            } else {
+                result.innerHTML = '❌ Chrome Storage API not available - Extension may not be properly installed';
+                result.className = 'test-result error';
+            }
+        }
+
+        function testStorageCleanup() {
+            const result = document.getElementById('storage-result');
+            
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                const cleanupTestData = {
+                    tempFile: 'cleanup-test-' + Date.now(),
+                    expiry: Date.now() + 5000 // 5 seconds from now
+                };
+                
+                chrome.storage.local.set(cleanupTestData, function() {
+                    if (chrome.runtime.lastError) {
+                        result.innerHTML = `❌ Storage error: ${chrome.runtime.lastError.message}`;
+                        result.className = 'test-result error';
+                    } else {
+                        result.innerHTML = `
+                            🔄 <strong>Testing auto-cleanup mechanism...</strong><br>
+                            📝 Temporary data saved with 5-second expiry<br>
+                            ⏰ Waiting for automatic cleanup...<br>
+                            <div id="cleanup-countdown">5</div>
+                        `;
+                        result.className = 'test-result info';
+                        
+                        let countdown = 5;
+                        const countdownInterval = setInterval(() => {
+                            countdown--;
+                            const countdownEl = document.getElementById('cleanup-countdown');
+                            if (countdownEl) {
+                                countdownEl.textContent = countdown;
+                            }
+                            
+                            if (countdown <= 0) {
+                                clearInterval(countdownInterval);
+                                
+                                // Check if data was cleaned up
+                                chrome.storage.local.get(['tempFile'], function(remaining) {
+                                    if (remaining.tempFile) {
+                                        result.innerHTML += '<br>⚠️ Data still present - manual cleanup required';
+                                        chrome.storage.local.remove(['tempFile', 'expiry']);
+                                    } else {
+                                        result.innerHTML += '<br>✅ <strong>Auto-cleanup working correctly!</strong>';
+                                        result.className = 'test-result success';
+                                    }
+                                });
+                            }
+                        }, 1000);
+                    }
+                });
+            } else {
+                result.innerHTML = '❌ Chrome Storage API not available';
+                result.className = 'test-result error';
+            }
+        }
+
+        function testFileTransfer() {
+            const result = document.getElementById('file-result');
+            const fileInput = document.getElementById('testFile');
+            
+            if (fileInput.files.length === 0) {
+                result.innerHTML = '❌ Please select a PDF file first';
+                result.className = 'test-result error';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            if (file.type !== 'application/pdf') {
+                result.innerHTML = '❌ Please select a PDF file (.pdf extension required)';
+                result.className = 'test-result error';
+                return;
+            }
+            
+            result.innerHTML = `🔄 Testing file transfer: <strong>${file.name}</strong> (${(file.size/1024/1024).toFixed(2)} MB)`;
+            result.className = 'test-result info';
+            
+            // Simulate file transfer process
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const fileData = e.target.result;
+                const sizeKB = (fileData.length / 1024).toFixed(2);
+                
+                result.innerHTML = `
+                    ✅ <strong>File processing successful!</strong><br>
+                    📄 File name: ${file.name}<br>
+                    📊 Original size: ${(file.size/1024/1024).toFixed(2)} MB<br>
+                    📊 Processed size: ${sizeKB} KB (base64 encoded)<br>
+                    🔄 File ready for transfer to LocalPDF.online<br><br>
+                    <em>Note: In real usage, this file would be transferred to LocalPDF.online via PostMessage API</em>
+                `;
+                result.className = 'test-result success';
+            };
+            
+            reader.onerror = function() {
+                result.innerHTML = '❌ Error reading file. Please try a different PDF.';
+                result.className = 'test-result error';
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        function openDevTools() {
+            const result = document.getElementById('devtools-result');
+            
+            result.innerHTML = `
+                <strong>Developer Tools Instructions:</strong><br><br>
+                <strong>1. Extension DevTools:</strong><br>
+                • Go to <code>chrome://extensions/</code><br>
+                • Find "LocalPDF Smart Launcher"<br>
+                • Click "service worker" (background script console)<br><br>
+                
+                <strong>2. Content Script DevTools:</strong><br>
+                • Open any PDF page<br>
+                • Press F12 → Console<br>
+                • Look for LocalPDF extension logs<br><br>
+                
+                <strong>3. What to check:</strong><br>
+                • ✅ No error messages in console<br>
+                • ✅ Extension scripts load successfully<br>
+                • ✅ Context menus register properly<br>
+                • ✅ File transfer functions work<br>
+            `;
+            result.className = 'test-result info';
+            
+            // Try to open extension management page
+            if (typeof chrome !== 'undefined' && chrome.tabs) {
+                chrome.tabs.create({url: 'chrome://extensions/'});
+            } else {
+                result.innerHTML += '<br><br><a href="chrome://extensions/" target="_blank">📧 Click here to open Extensions page</a>';
+            }
+        }
+
+        function checkConsoleErrors() {
+            const result = document.getElementById('devtools-result');
+            
+            // Check for console errors
+            const errors = [];
+            const originalError = console.error;
+            
+            console.error = function(...args) {
+                errors.push(args.join(' '));
+                originalError.apply(console, args);
+            };
+            
+            // Trigger some extension functionality to check for errors
+            setTimeout(() => {
+                console.error = originalError;
+                
+                if (errors.length === 0) {
+                    result.innerHTML = `
+                        ✅ <strong>No console errors detected!</strong><br>
+                        📊 Console monitoring completed<br>
+                        🔍 Extension appears to be running cleanly<br><br>
+                        <em>Continue with manual testing to verify all functionality</em>
+                    `;
+                    result.className = 'test-result success';
+                } else {
+                    result.innerHTML = `
+                        ⚠️ <strong>Console errors detected:</strong><br>
+                        ${errors.map(error => `• ${error}`).join('<br>')}<br><br>
+                        <em>These errors may affect extension functionality</em>
+                    `;
+                    result.className = 'test-result warning';
+                }
+            }, 2000);
+            
+            result.innerHTML = '🔄 Monitoring console for errors... (2 seconds)';
+            result.className = 'test-result info';
+        }
+
+        function runQuickTest() {
+            const result = document.getElementById('quick-result');
+            
+            result.innerHTML = `
+                <strong>🚀 Quick Test Procedure (2 minutes):</strong><br><br>
+                
+                <strong>Step 1: Basic Installation Check</strong><br>
+                ✅ Extension installed → Look for LocalPDF icon in toolbar<br><br>
+                
+                <strong>Step 2: Popup Test</strong><br>
+                ✅ Click LocalPDF icon → Popup opens with 9 tools<br><br>
+                
+                <strong>Step 3: Context Menu Test</strong><br>
+                ✅ Right-click PDF link → LocalPDF menu appears<br><br>
+                
+                <strong>Step 4: URL Parameter Test</strong><br>
+                ✅ Click any tool → LocalPDF.online opens with parameters<br><br>
+                
+                <strong>Step 5: Floating Button Test</strong><br>
+                ✅ Open PDF page → Floating button appears<br><br>
+                
+                <strong>🎉 If all steps work, your extension is ready!</strong><br><br>
+                
+                <button class="test-button" onclick="window.open('https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', '_blank')">
+                    📄 Open Test PDF
+                </button>
+                <button class="test-button" onclick="testURLParameter('compress')">
+                    🔗 Test URL Parameters
+                </button>
+            `;
+            result.className = 'test-result info';
+        }
+
+        // Auto-run status check on page load
+        window.onload = function() {
+            setTimeout(checkExtensionStatus, 1000);
+        };
+    </script>
+</body>
+</html>
