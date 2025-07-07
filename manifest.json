@@ -38,14 +38,9 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "lib/*.js",
-        "lib/pdf-lib.min.js"
+        "lib/*.js"
       ],
       "matches": ["<all_urls>"]
     }
-  ],
-  
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' https://cdnjs.cloudflare.com; object-src 'self'"
-  }
+  ]
 }
