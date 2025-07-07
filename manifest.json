@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "LocalPDF - PDF Tools",
+  "version": "0.1.0",
+  "description": "Privacy-focused PDF tools: merge, split, compress, and more. All processing happens locally in your browser.",
+  
+  "permissions": [
+    "storage",
+    "downloads",
+    "activeTab",
+    "contextMenus"
+  ],
+  
+  "host_permissions": [
+    "*://*/*.pdf"
+  ],
+  
+  "background": {
+    "service_worker": "background/background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "LocalPDF Tools",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  
+  "options_page": "options/options.html",
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/icons/*.png", "lib/*.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
