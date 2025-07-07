@@ -23,6 +23,11 @@
       "matches": ["*://*/*.pdf", "file://*/*.pdf", "*://*/*"],
       "js": ["content/content.js"],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["https://localpdf.online/*"],
+      "js": ["content/localpdf-site-integration.js"],
+      "run_at": "document_start"
     }
   ],
   
