@@ -12,7 +12,8 @@
   ],
   
   "host_permissions": [
-    "*://*/*.pdf"
+    "*://*/*.pdf",
+    "https://cdnjs.cloudflare.com/*"
   ],
   
   "background": {
@@ -36,8 +37,12 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["assets/icons/*.png", "lib/*.js"],
+      "resources": ["lib/*.js"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://cdnjs.cloudflare.com; object-src 'self'"
+  }
 }
