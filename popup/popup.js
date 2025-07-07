@@ -1,399 +1,361 @@
 /**
- * LocalPDF Extension - Popup Controller
- * Handles user interactions and tool navigation
+ * LocalPDF Smart Launcher - Popup Script
+ * Handles user interactions and tool launching
  */
 
-class LocalPDFPopup {
-    constructor() {
-        this.currentTool = null;
-        this.files = [];
-        this.isProcessing = false;
+class SmartLauncherPopup {
+  constructor() {
+    this.fileInput = null;
+    this.initialize();
+  }
+
+  initialize() {
+    console.log('[LocalPDF Smart Launcher] Popup initialized');
+    
+    // Get DOM elements
+    this.fileInput = document.getElementById('file-input');
+    
+    // Set up event listeners
+    this.setupEventListeners();
+    
+    // Show current status
+    this.updateStatus();
+  }
+
+  /**
+   * Set up all event listeners
+   */
+  setupEventListeners() {
+    // Tool buttons
+    document.querySelectorAll('.tool-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tool = btn.dataset.tool;
+        this.handleToolClick(tool);
+      });
+    });
+
+    // More tools toggle
+    const showMoreBtn = document.getElementById('show-more');
+    const moreTools = document.getElementById('more-tools');
+    
+    if (showMoreBtn && moreTools) {
+      showMoreBtn.addEventListener('click', () => {
+        const isVisible = moreTools.style.display !== 'none';
         
-        this.initializeUI();
-        this.bindEvents();
-        this.loadSettings();
-    }
-
-    /**
-     * Initialize the popup UI and check extension state
-     */
-    async initializeUI() {
-        try {
-            // Check if we're on a PDF page
-            const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-            if (tab && tab.url && tab.url.toLowerCase().includes('.pdf')) {
-                this.showPDFDetected(tab.url);
-            }
-
-            // Load extension settings
-            const settings = await this.getSettings();
-            this.applySettings(settings);
-
-            // Animate UI entrance
-            document.querySelector('.container').classList.add('fade-in');
-        } catch (error) {
-            console.error('[LocalPDF] Error initializing popup:', error);
-        }
-    }
-
-    /**
-     * Bind event listeners to UI elements
-     */
-    bindEvents() {
-        // Tool buttons
-        document.querySelectorAll('.tool-button:not([disabled])').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const tool = button.dataset.tool;
-                this.handleToolSelect(tool, button);
-            });
-        });
-
-        // Settings button
-        document.getElementById('settingsBtn').addEventListener('click', () => {
-            this.openSettings();
-        });
-
-        // File input handling
-        const fileInput = document.getElementById('fileInput');
-        fileInput.addEventListener('change', (e) => {
-            this.handleFileSelect(e.target.files);
-        });
-
-        // Drop zone events
-        const dropZone = document.getElementById('dropZone');
-        dropZone.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        // Drag and drop functionality
-        this.setupDragDrop();
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            this.handleKeyboardShortcuts(e);
-        });
-    }
-
-    /**
-     * Handle tool selection
-     */
-    async handleToolSelect(tool, buttonElement) {
-        if (this.isProcessing) return;
-
-        try {
-            this.currentTool = tool;
-            
-            // Visual feedback
-            this.highlightSelectedTool(buttonElement);
-            
-            // Show file selection for tools that need files
-            if (this.toolNeedsFiles(tool)) {
-                this.showFileSelection();
-            } else {
-                // For tools that work with current page
-                await this.executeToolOnCurrentPage(tool);
-            }
-
-        } catch (error) {
-            console.error(`[LocalPDF] Error selecting tool ${tool}:`, error);
-            this.showError(`Failed to select ${tool} tool`);
-        }
-    }
-
-    /**
-     * Show file selection interface
-     */
-    showFileSelection() {
-        const dropZone = document.getElementById('dropZone');
-        dropZone.style.display = 'flex';
-        dropZone.classList.add('fade-in');
-    }
-
-    /**
-     * Hide file selection interface
-     */
-    hideFileSelection() {
-        const dropZone = document.getElementById('dropZone');
-        dropZone.style.display = 'none';
-        dropZone.classList.remove('fade-in');
-    }
-
-    /**
-     * Handle file selection
-     */
-    async handleFileSelect(files) {
-        if (!files || files.length === 0) return;
-
-        try {
-            const pdfFiles = Array.from(files).filter(file => 
-                file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-            );
-
-            if (pdfFiles.length === 0) {
-                this.showError('Please select PDF files only');
-                return;
-            }
-
-            this.files = pdfFiles;
-            this.hideFileSelection();
-            
-            // Execute the selected tool
-            await this.executeTool(this.currentTool, this.files);
-
-        } catch (error) {
-            console.error('[LocalPDF] Error handling file selection:', error);
-            this.showError('Failed to process selected files');
-        }
-    }
-
-    /**
-     * Execute tool with selected files
-     */
-    async executeTool(tool, files) {
-        if (this.isProcessing) return;
-
-        try {
-            this.setProcessingState(true, `Processing with ${tool} tool...`);
-
-            // Send message to background script to handle the tool
-            const response = await chrome.runtime.sendMessage({
-                action: 'executeTool',
-                tool: tool,
-                files: await this.filesToBase64(files)
-            });
-
-            if (response.success) {
-                this.showSuccess(`${tool} completed successfully!`);
-                
-                // Auto-close popup after success (optional)
-                setTimeout(() => {
-                    window.close();
-                }, 2000);
-            } else {
-                throw new Error(response.error || 'Tool execution failed');
-            }
-
-        } catch (error) {
-            console.error(`[LocalPDF] Error executing ${tool}:`, error);
-            this.showError(`Failed to execute ${tool}: ${error.message}`);
-        } finally {
-            this.setProcessingState(false);
-        }
-    }
-
-    /**
-     * Execute tool on current page (for PDF pages)
-     */
-    async executeToolOnCurrentPage(tool) {
-        try {
-            const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-            
-            const response = await chrome.runtime.sendMessage({
-                action: 'executeToolOnPage',
-                tool: tool,
-                tabId: tab.id,
-                url: tab.url
-            });
-
-            if (response.success) {
-                this.showSuccess(`${tool} completed!`);
-            } else {
-                throw new Error(response.error || 'Tool execution failed');
-            }
-
-        } catch (error) {
-            console.error(`[LocalPDF] Error executing ${tool} on page:`, error);
-            this.showError(`Failed to execute ${tool}`);
-        }
-    }
-
-    /**
-     * Setup drag and drop functionality
-     */
-    setupDragDrop() {
-        const container = document.querySelector('.container');
-        const dropZone = document.getElementById('dropZone');
-
-        // Prevent default drag behaviors
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            container.addEventListener(eventName, this.preventDefaults, false);
-            document.body.addEventListener(eventName, this.preventDefaults, false);
-        });
-
-        // Highlight drop zone when dragging over
-        ['dragenter', 'dragover'].forEach(eventName => {
-            container.addEventListener(eventName, () => {
-                if (this.currentTool && this.toolNeedsFiles(this.currentTool)) {
-                    dropZone.style.display = 'flex';
-                }
-            }, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            container.addEventListener(eventName, () => {
-                // Only hide if not hovering over drop zone
-                setTimeout(() => {
-                    if (!dropZone.matches(':hover')) {
-                        dropZone.style.display = 'none';
-                    }
-                }, 100);
-            }, false);
-        });
-
-        // Handle dropped files
-        container.addEventListener('drop', (e) => {
-            const files = e.dataTransfer.files;
-            if (files.length > 0 && this.currentTool) {
-                this.handleFileSelect(files);
-            }
-        }, false);
-    }
-
-    /**
-     * Prevent default drag behaviors
-     */
-    preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    /**
-     * Handle keyboard shortcuts
-     */
-    handleKeyboardShortcuts(e) {
-        // Ctrl/Cmd + Number keys for quick tool access
-        if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '9') {
-            e.preventDefault();
-            const toolIndex = parseInt(e.key) - 1;
-            const toolButtons = document.querySelectorAll('.tool-button:not([disabled])');
-            if (toolButtons[toolIndex]) {
-                toolButtons[toolIndex].click();
-            }
-        }
-
-        // Escape to close dialogs
-        if (e.key === 'Escape') {
-            this.hideFileSelection();
-            this.clearSelection();
-        }
-    }
-
-    /**
-     * Utility methods
-     */
-    toolNeedsFiles(tool) {
-        return ['merge', 'split', 'compress', 'addText', 'watermark', 'rotate', 
-                'extractPages', 'extractText', 'pdfToImage'].includes(tool);
-    }
-
-    highlightSelectedTool(buttonElement) {
-        // Remove previous selections
-        document.querySelectorAll('.tool-button').forEach(btn => {
-            btn.classList.remove('selected');
-        });
-        
-        // Add selection to current button
-        buttonElement.classList.add('selected');
-    }
-
-    clearSelection() {
-        document.querySelectorAll('.tool-button').forEach(btn => {
-            btn.classList.remove('selected');
-        });
-        this.currentTool = null;
-    }
-
-    setProcessingState(isProcessing, message = 'Processing...') {
-        this.isProcessing = isProcessing;
-        const overlay = document.getElementById('processingOverlay');
-        
-        if (isProcessing) {
-            document.querySelector('.processing-text').textContent = message;
-            overlay.style.display = 'flex';
+        if (isVisible) {
+          moreTools.style.display = 'none';
+          showMoreBtn.classList.remove('expanded');
         } else {
-            overlay.style.display = 'none';
+          moreTools.style.display = 'block';
+          showMoreBtn.classList.add('expanded');
         }
+      });
     }
 
-    showError(message) {
-        // You could implement a toast notification here
-        console.error('[LocalPDF]', message);
-        alert(`LocalPDF: ${message}`);
+    // Primary actions
+    const openLocalPDFBtn = document.getElementById('open-localpdf');
+    if (openLocalPDFBtn) {
+      openLocalPDFBtn.addEventListener('click', () => {
+        this.openLocalPDF();
+      });
     }
 
-    showSuccess(message) {
-        // You could implement a toast notification here
-        console.log('[LocalPDF]', message);
-        // Could show a subtle success indicator
+    const uploadFilesBtn = document.getElementById('upload-files');
+    if (uploadFilesBtn) {
+      uploadFilesBtn.addEventListener('click', () => {
+        this.triggerFileUpload();
+      });
     }
 
-    showPDFDetected(url) {
-        // Could show a special indicator that we detected a PDF
-        console.log('[LocalPDF] PDF detected:', url);
+    // File input
+    if (this.fileInput) {
+      this.fileInput.addEventListener('change', (e) => {
+        this.handleFileSelection(e.target.files);
+      });
     }
 
-    async filesToBase64(files) {
-        const results = [];
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      this.handleKeyboardShortcuts(e);
+    });
+  }
+
+  /**
+   * Handle tool button clicks
+   */
+  async handleToolClick(tool) {
+    try {
+      console.log(`[LocalPDF Smart Launcher] Tool clicked: ${tool}`);
+      
+      // Add loading state
+      this.setLoadingState(true);
+      
+      // Open LocalPDF.online with pre-selected tool
+      const response = await chrome.runtime.sendMessage({
+        action: 'openTool',
+        tool: tool
+      });
+      
+      if (response && response.success) {
+        console.log(`[LocalPDF Smart Launcher] Opened ${tool} tool successfully`);
+        // Close popup after successful launch
+        window.close();
+      } else {
+        throw new Error('Failed to open tool');
+      }
+      
+    } catch (error) {
+      console.error('[LocalPDF Smart Launcher] Tool click failed:', error);
+      this.showError('Failed to open tool. Please try again.');
+    } finally {
+      this.setLoadingState(false);
+    }
+  }
+
+  /**
+   * Open LocalPDF.online without specific tool
+   */
+  async openLocalPDF() {
+    try {
+      console.log('[LocalPDF Smart Launcher] Opening LocalPDF.online');
+      
+      this.setLoadingState(true);
+      
+      // Open LocalPDF.online main page
+      const tab = await chrome.tabs.create({ 
+        url: 'https://localpdf.online?from=extension' 
+      });
+      
+      if (tab) {
+        console.log('[LocalPDF Smart Launcher] LocalPDF.online opened successfully');
+        window.close();
+      }
+      
+    } catch (error) {
+      console.error('[LocalPDF Smart Launcher] Failed to open LocalPDF.online:', error);
+      this.showError('Failed to open LocalPDF.online. Please try again.');
+    } finally {
+      this.setLoadingState(false);
+    }
+  }
+
+  /**
+   * Trigger file upload dialog
+   */
+  triggerFileUpload() {
+    if (this.fileInput) {
+      this.fileInput.click();
+    }
+  }
+
+  /**
+   * Handle file selection for transfer
+   */
+  async handleFileSelection(files) {
+    if (!files || files.length === 0) return;
+    
+    try {
+      console.log(`[LocalPDF Smart Launcher] Files selected: ${files.length}`);
+      
+      this.setLoadingState(true);
+      
+      // Convert FileList to Array
+      const fileArray = Array.from(files);
+      
+      // Validate files
+      const validFiles = fileArray.filter(file => {
+        return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      });
+      
+      if (validFiles.length === 0) {
+        throw new Error('Please select PDF files only');
+      }
+      
+      if (validFiles.length !== fileArray.length) {
+        console.warn(`[LocalPDF Smart Launcher] ${fileArray.length - validFiles.length} non-PDF files filtered out`);
+      }
+      
+      // Show tool selection for uploaded files
+      this.showToolSelectionForFiles(validFiles);
+      
+    } catch (error) {
+      console.error('[LocalPDF Smart Launcher] File selection failed:', error);
+      this.showError(error.message);
+    } finally {
+      this.setLoadingState(false);
+    }
+  }
+
+  /**
+   * Show tool selection dialog for uploaded files
+   */
+  showToolSelectionForFiles(files) {
+    // For simplicity, just transfer files to LocalPDF.online without specific tool
+    // The user can select the tool on the site
+    this.transferFilesToLocalPDF(files, '');
+  }
+
+  /**
+   * Transfer files to LocalPDF.online
+   */
+  async transferFilesToLocalPDF(files, tool = '') {
+    try {
+      console.log(`[LocalPDF Smart Launcher] Transferring ${files.length} files`);
+      
+      this.setLoadingState(true);
+      
+      // Send files to background script for transfer
+      const response = await chrome.runtime.sendMessage({
+        action: 'transferFiles',
+        files: files,
+        tool: tool,
+        options: {
+          source: 'popup'
+        }
+      });
+      
+      if (response && response.success) {
+        console.log('[LocalPDF Smart Launcher] Files transferred successfully');
+        this.showSuccess('Files transferred to LocalPDF.online!');
         
-        for (const file of files) {
-            const base64 = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.readAsDataURL(file);
-            });
-            
-            results.push({
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                data: base64
-            });
-        }
-        
-        return results;
+        // Close popup after brief delay
+        setTimeout(() => {
+          window.close();
+        }, 1500);
+      } else {
+        throw new Error(response?.error || 'Transfer failed');
+      }
+      
+    } catch (error) {
+      console.error('[LocalPDF Smart Launcher] File transfer failed:', error);
+      this.showError('Failed to transfer files. Please try again.');
+    } finally {
+      this.setLoadingState(false);
     }
+  }
 
-    async getSettings() {
-        try {
-            const result = await chrome.storage.sync.get(['localPDFSettings']);
-            return result.localPDFSettings || {};
-        } catch (error) {
-            console.error('[LocalPDF] Error loading settings:', error);
-            return {};
-        }
+  /**
+   * Handle keyboard shortcuts
+   */
+  handleKeyboardShortcuts(e) {
+    // Escape to close
+    if (e.key === 'Escape') {
+      window.close();
     }
+    
+    // Enter to open LocalPDF.online
+    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+      this.openLocalPDF();
+    }
+    
+    // Ctrl/Cmd + O to open file dialog
+    if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+      e.preventDefault();
+      this.triggerFileUpload();
+    }
+    
+    // Number keys for quick tool access
+    if (e.key >= '1' && e.key <= '6') {
+      const toolButtons = document.querySelectorAll('.tools-grid .tool-btn');
+      const index = parseInt(e.key) - 1;
+      
+      if (toolButtons[index]) {
+        const tool = toolButtons[index].dataset.tool;
+        this.handleToolClick(tool);
+      }
+    }
+  }
 
-    applySettings(settings) {
-        // Apply any UI settings (theme, etc.)
-        if (settings.theme) {
-            document.body.classList.add(`theme-${settings.theme}`);
-        }
+  /**
+   * Update status display
+   */
+  async updateStatus() {
+    try {
+      // Could check current tab for PDF or get extension status
+      // For now, just ensure UI is ready
+      console.log('[LocalPDF Smart Launcher] Status updated');
+      
+    } catch (error) {
+      console.error('[LocalPDF Smart Launcher] Status update failed:', error);
     }
+  }
 
-    loadSettings() {
-        // Load and apply saved settings
-        this.getSettings().then(settings => {
-            this.applySettings(settings);
-        });
-    }
+  /**
+   * Set loading state for UI
+   */
+  setLoadingState(loading) {
+    const buttons = document.querySelectorAll('button');
+    
+    buttons.forEach(btn => {
+      if (loading) {
+        btn.classList.add('loading');
+        btn.disabled = true;
+      } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+  }
 
-    openSettings() {
-        chrome.runtime.openOptionsPage();
+  /**
+   * Show error message
+   */
+  showError(message) {
+    this.showMessage(message, 'error');
+  }
+
+  /**
+   * Show success message
+   */
+  showSuccess(message) {
+    this.showMessage(message, 'success');
+  }
+
+  /**
+   * Show message to user
+   */
+  showMessage(message, type = 'info') {
+    // Create or update message element
+    let messageEl = document.getElementById('popup-message');
+    
+    if (!messageEl) {
+      messageEl = document.createElement('div');
+      messageEl.id = 'popup-message';
+      messageEl.style.cssText = `
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        text-align: center;
+        z-index: 1000;
+        transition: all 0.3s ease;
+      `;
+      document.body.appendChild(messageEl);
     }
+    
+    // Set message and style based on type
+    messageEl.textContent = message;
+    messageEl.className = type;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      if (messageEl.parentElement) {
+        messageEl.remove();
+      }
+    }, 3000);
+  }
 }
 
 // Initialize popup when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new LocalPDFPopup();
+  new SmartLauncherPopup();
 });
 
-// Add some CSS for selected state
-const style = document.createElement('style');
-style.textContent = `
-    .tool-button.selected {
-        border-color: #667eea !important;
-        background: #f0f4ff !important;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-    }
-`;
-document.head.appendChild(style);
+// Handle popup unload
+window.addEventListener('beforeunload', () => {
+  console.log('[LocalPDF Smart Launcher] Popup closing');
+});
