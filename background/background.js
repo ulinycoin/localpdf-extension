@@ -1,28 +1,29 @@
 /**
  * LocalPDF Smart Launcher - Background Service Worker
- * Handles context menus, file transfers, and coordination with LocalPDF.online
+ * Pure Smart Launcher - No local PDF processing, only bridge to LocalPDF.online
+ * Version: 1.0.0
  */
 
-// Import file transfer utilities
-importScripts('lib/file-transfer.js');
+console.log('[LocalPDF] 🚀 Smart Launcher Background Script Loaded - v1.0.0');
 
-class SmartLauncherBackground {
+class LocalPDFSmartLauncher {
   constructor() {
-    this.fileTransfer = new FileTransferManager();
     this.initialize();
   }
 
   async initialize() {
-    console.log('[LocalPDF Smart Launcher] Background service worker initialized');
+    console.log('[LocalPDF] 🎯 Initializing Smart Launcher...');
     
-    // Set up context menus
+    // Set up context menus for PDF files
     this.setupContextMenus();
     
     // Set up event listeners
     this.setupEventListeners();
     
     // Clean up old storage on startup
-    this.cleanupOldSessions();
+    this.cleanupExpiredSessions();
+    
+    console.log('[LocalPDF] ✅ Smart Launcher initialized successfully!');
   }
 
   /**
@@ -36,7 +37,7 @@ class SmartLauncherBackground {
       chrome.contextMenus.create({
         id: "localpdf-main",
         title: "LocalPDF",
-        contexts: ["link", "page", "selection"],
+        contexts: ["link", "page"],
         documentUrlPatterns: [
           "*://*/*.pdf",
           "file://*/*.pdf"
@@ -46,14 +47,14 @@ class SmartLauncherBackground {
       // Tool-specific submenus
       const tools = [
         { id: 'compress', title: 'Compress PDF', icon: '📦' },
-        { id: 'merge', title: 'Merge with other PDFs', icon: '🔗' },
+        { id: 'merge', title: 'Merge PDFs', icon: '🔗' },
         { id: 'split', title: 'Split PDF', icon: '✂️' },
+        { id: 'unlock', title: 'Unlock PDF', icon: '🔓' },
+        { id: 'protect', title: 'Protect PDF', icon: '🔒' },
         { id: 'rotate', title: 'Rotate PDF', icon: '🔄' },
-        { id: 'addtext', title: 'Add Text', icon: '📝' },
-        { id: 'watermark', title: 'Add Watermark', icon: '🏷️' },
-        { id: 'extract-pages', title: 'Extract Pages', icon: '📄' },
-        { id: 'extract-text', title: 'Extract Text', icon: '📋' },
-        { id: 'pdf-to-image', title: 'Convert to Image', icon: '🖼️' }
+        { id: 'convert', title: 'PDF to Image', icon: '🖼️' },
+        { id: 'extract', title: 'Extract Text', icon: '📝' },
+        { id: 'organize', title: 'Organize PDF', icon: '📄' }
       ];
 
       tools.forEach(tool => {
@@ -61,7 +62,7 @@ class SmartLauncherBackground {
           id: `localpdf-${tool.id}`,
           parentId: "localpdf-main",
           title: `${tool.icon} ${tool.title}`,
-          contexts: ["link", "page", "selection"]
+          contexts: ["link", "page"]
         });
       });
 
@@ -76,10 +77,10 @@ class SmartLauncherBackground {
         id: "localpdf-open",
         parentId: "localpdf-main",
         title: "🚀 Open LocalPDF.online",
-        contexts: ["link", "page", "selection"]
+        contexts: ["link", "page"]
       });
 
-      console.log('[LocalPDF Smart Launcher] Context menus created');
+      console.log('[LocalPDF] 📋 Context menus created for 9 PDF tools');
     });
   }
 
@@ -100,142 +101,180 @@ class SmartLauncherBackground {
 
     // Clean up storage when extension starts/restarts
     chrome.runtime.onStartup.addListener(() => {
-      this.cleanupOldSessions();
+      this.cleanupExpiredSessions();
     });
+
+    console.log('[LocalPDF] 👂 Event listeners set up');
   }
 
   /**
-   * Handle context menu clicks
+   * Handle context menu clicks - Smart Launcher approach
    */
   async handleContextMenuClick(info, tab) {
-    console.log('[LocalPDF Smart Launcher] Context menu clicked:', info.menuItemId);
+    console.log('[LocalPDF] 🖱️ Context menu clicked:', info.menuItemId);
     
     try {
       if (info.menuItemId === 'localpdf-open') {
         // Just open LocalPDF.online
-        chrome.tabs.create({ url: 'https://localpdf.online?from=extension' });
+        chrome.tabs.create({ url: 'https://localpdf.online/?from=extension' });
         return;
       }
 
       if (info.menuItemId.startsWith('localpdf-')) {
         const tool = info.menuItemId.replace('localpdf-', '');
         
-        if (info.linkUrl) {
-          // Handle PDF link
-          await this.handlePDFLink(info.linkUrl, tool, tab);
-        } else if (info.pageUrl && info.pageUrl.endsWith('.pdf')) {
-          // Handle PDF page
-          await this.handlePDFPage(info.pageUrl, tool, tab);
-        } else {
-          // Open LocalPDF with tool pre-selected and prompt for file
-          const url = `https://localpdf.online?from=extension&tool=${tool}&prompt=files`;
+        if (info.linkUrl && info.linkUrl.endsWith('.pdf')) {
+          // Handle PDF link - open LocalPDF with URL parameter
+          const url = `https://localpdf.online/?from=extension&tool=${tool}&url=${encodeURIComponent(info.linkUrl)}`;
           chrome.tabs.create({ url });
+          console.log('[LocalPDF] 🔗 Opened PDF link with tool:', tool);
+        } else if (info.pageUrl && info.pageUrl.endsWith('.pdf')) {
+          // Handle PDF page - try to transfer current PDF
+          try {
+            await this.transferCurrentPDF(tab.id, tool);
+          } catch (error) {
+            console.log('[LocalPDF] ⚠️ Fallback to URL method for PDF page');
+            const url = `https://localpdf.online/?from=extension&tool=${tool}&url=${encodeURIComponent(info.pageUrl)}`;
+            chrome.tabs.create({ url });
+          }
+        } else {
+          // Open LocalPDF with tool pre-selected
+          const url = `https://localpdf.online/?from=extension&tool=${tool}`;
+          chrome.tabs.create({ url });
+          console.log('[LocalPDF] 🎯 Opened LocalPDF with pre-selected tool:', tool);
         }
       }
     } catch (error) {
-      console.error('[LocalPDF Smart Launcher] Context menu action failed:', error);
-      this.showError('Failed to open LocalPDF. Please try again.');
+      console.error('[LocalPDF] ❌ Context menu action failed:', error);
+      // Fallback: just open LocalPDF.online
+      chrome.tabs.create({ url: 'https://localpdf.online/?from=extension' });
     }
   }
 
   /**
-   * Handle PDF link from context menu
+   * Transfer current PDF from content script
    */
-  async handlePDFLink(linkUrl, tool, tab) {
-    try {
-      // Fetch the PDF file
-      const response = await fetch(linkUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.status}`);
-      }
-      
-      const blob = await response.blob();
-      const file = new File([blob], this.extractFilenameFromUrl(linkUrl), { type: 'application/pdf' });
-      
-      // Transfer to LocalPDF
-      await this.fileTransfer.transferToLocalPDF([file], tool);
-      
-    } catch (error) {
-      console.error('[LocalPDF Smart Launcher] PDF link handling failed:', error);
-      // Fallback: open LocalPDF with URL parameter
-      const url = `https://localpdf.online?from=extension&tool=${tool}&url=${encodeURIComponent(linkUrl)}`;
-      chrome.tabs.create({ url });
-    }
-  }
-
-  /**
-   * Handle PDF page from context menu
-   */
-  async handlePDFPage(pageUrl, tool, tab) {
-    try {
-      // For PDF pages, we'll send a message to the content script to handle the current PDF
-      const response = await chrome.tabs.sendMessage(tab.id, {
-        action: 'transferCurrentPDF',
-        tool: tool,
-        url: pageUrl
+  async transferCurrentPDF(tabId, tool) {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.sendMessage(tabId, {
+        action: 'getCurrentPDF',
+        tool: tool
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else if (response && response.success) {
+          resolve(response);
+        } else {
+          reject(new Error('Failed to get current PDF'));
+        }
       });
-      
-      if (!response || !response.success) {
-        throw new Error('Failed to transfer current PDF');
-      }
-      
-    } catch (error) {
-      console.error('[LocalPDF Smart Launcher] PDF page handling failed:', error);
-      // Fallback: open LocalPDF with URL parameter
-      const url = `https://localpdf.online?from=extension&tool=${tool}&url=${encodeURIComponent(pageUrl)}`;
-      chrome.tabs.create({ url });
-    }
+    });
   }
 
   /**
    * Handle messages from content scripts and popup
    */
   async handleMessage(request, sender, sendResponse) {
-    console.log('[LocalPDF Smart Launcher] Received message:', request.action);
+    console.log('[LocalPDF] 📨 Received message:', request.action);
     
     try {
       switch (request.action) {
-        case 'transferFiles':
-          const result = await this.fileTransfer.transferToLocalPDF(
-            request.files, 
-            request.tool, 
-            request.options
-          );
-          sendResponse({ success: true, result });
-          break;
-
         case 'openTool':
-          const url = `https://localpdf.online?from=extension&tool=${request.tool}`;
+          // Open LocalPDF.online with specific tool
+          const url = `https://localpdf.online/?from=extension&tool=${request.tool}`;
           const tab = await chrome.tabs.create({ url });
           sendResponse({ success: true, tabId: tab.id });
+          console.log('[LocalPDF] 🚀 Opened tool:', request.tool);
+          break;
+
+        case 'transferFiles':
+          // Store files temporarily and open LocalPDF.online
+          const sessionId = this.generateSessionId();
+          await this.storeFilesTemporarily(sessionId, request.files, request.tool);
+          
+          const transferUrl = `https://localpdf.online/?from=extension&tool=${request.tool}&session=${sessionId}`;
+          const transferTab = await chrome.tabs.create({ url: transferUrl });
+          
+          sendResponse({ success: true, sessionId, tabId: transferTab.id });
+          console.log('[LocalPDF] 📁 Files stored for transfer, session:', sessionId);
           break;
 
         case 'getStoredFiles':
+          // Retrieve stored files for LocalPDF.online
           const storedData = await chrome.storage.local.get([`transfer_${request.sessionId}`]);
           const sessionData = storedData[`transfer_${request.sessionId}`];
           
           if (sessionData && sessionData.expiry > Date.now()) {
             sendResponse({ success: true, data: sessionData });
             // Clean up after successful retrieval
-            this.fileTransfer.cleanupSession(request.sessionId);
+            await chrome.storage.local.remove([`transfer_${request.sessionId}`]);
+            console.log('[LocalPDF] ✅ Files retrieved and cleaned up, session:', request.sessionId);
           } else {
             sendResponse({ success: false, error: 'Session expired or not found' });
+            console.log('[LocalPDF] ⚠️ Session not found or expired:', request.sessionId);
           }
+          break;
+
+        case 'ping':
+          // Health check
+          sendResponse({ success: true, status: 'Smart Launcher ready' });
           break;
 
         default:
           sendResponse({ success: false, error: 'Unknown action' });
+          console.log('[LocalPDF] ❓ Unknown action:', request.action);
       }
     } catch (error) {
-      console.error('[LocalPDF Smart Launcher] Message handling failed:', error);
+      console.error('[LocalPDF] ❌ Message handling failed:', error);
       sendResponse({ success: false, error: error.message });
     }
   }
 
   /**
-   * Clean up old storage sessions
+   * Store files temporarily for transfer to LocalPDF.online
    */
-  async cleanupOldSessions() {
+  async storeFilesTemporarily(sessionId, files, tool) {
+    const fileData = [];
+    
+    for (const file of files) {
+      fileData.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: file.data, // base64 data
+        lastModified: file.lastModified
+      });
+    }
+
+    const sessionData = {
+      files: fileData,
+      tool: tool,
+      timestamp: Date.now(),
+      expiry: Date.now() + (5 * 60 * 1000), // 5 minutes expiry
+      sessionId: sessionId
+    };
+
+    await chrome.storage.local.set({
+      [`transfer_${sessionId}`]: sessionData
+    });
+
+    // Set cleanup timer
+    setTimeout(() => {
+      this.cleanupSession(sessionId);
+    }, 5 * 60 * 1000); // 5 minutes
+  }
+
+  /**
+   * Generate unique session ID
+   */
+  generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  /**
+   * Clean up expired sessions
+   */
+  async cleanupExpiredSessions() {
     try {
       const storage = await chrome.storage.local.get(null);
       const now = Date.now();
@@ -249,57 +288,39 @@ class SmartLauncherBackground {
       
       if (keysToRemove.length > 0) {
         await chrome.storage.local.remove(keysToRemove);
-        console.log(`[LocalPDF Smart Launcher] Cleaned up ${keysToRemove.length} expired sessions`);
+        console.log(`[LocalPDF] 🧹 Cleaned up ${keysToRemove.length} expired sessions`);
       }
       
     } catch (error) {
-      console.error('[LocalPDF Smart Launcher] Cleanup failed:', error);
+      console.error('[LocalPDF] ❌ Cleanup failed:', error);
     }
   }
 
   /**
-   * Extract filename from URL
+   * Clean up specific session
    */
-  extractFilenameFromUrl(url) {
+  async cleanupSession(sessionId) {
     try {
-      const urlObj = new URL(url);
-      const pathname = urlObj.pathname;
-      const filename = pathname.split('/').pop();
-      return filename || 'document.pdf';
+      await chrome.storage.local.remove([`transfer_${sessionId}`]);
+      console.log(`[LocalPDF] 🗑️ Cleaned up session: ${sessionId}`);
     } catch (error) {
-      return 'document.pdf';
-    }
-  }
-
-  /**
-   * Show error notification to user
-   */
-  showError(message) {
-    console.error(`[LocalPDF Smart Launcher] Error: ${message}`);
-    
-    // Try to show browser notification if available
-    if (chrome.notifications) {
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'assets/icons/icon48.png',
-        title: 'LocalPDF Smart Launcher',
-        message: message
-      });
+      console.error('[LocalPDF] ❌ Session cleanup failed:', error);
     }
   }
 }
 
-// Initialize the background service worker
-const smartLauncher = new SmartLauncherBackground();
+// Initialize the Smart Launcher
+const smartLauncher = new LocalPDFSmartLauncher();
 
 // Handle extension installation/update
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[LocalPDF Smart Launcher] Extension installed/updated:', details.reason);
+  console.log('[LocalPDF] 📦 Extension installed/updated:', details.reason);
   
   if (details.reason === 'install') {
     // Open welcome page on first install
     chrome.tabs.create({ 
-      url: 'https://localpdf.online?from=extension&welcome=true' 
+      url: 'https://localpdf.online/?from=extension&welcome=true' 
     });
+    console.log('[LocalPDF] 🎉 Welcome tab opened for new installation');
   }
 });
