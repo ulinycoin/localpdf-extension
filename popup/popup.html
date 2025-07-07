@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalPDF Tools</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <img src="../assets/icons/icon48.png" alt="LocalPDF" class="logo-icon">
+                <h1>LocalPDF</h1>
+            </div>
+            <p class="tagline">Privacy-focused PDF tools</p>
+        </header>
+
+        <main class="tools-grid">
+            <!-- Essential Tools (Phase 1) -->
+            <div class="tool-section">
+                <h2>Essential Tools</h2>
+                
+                <button class="tool-button priority-high" data-tool="merge">
+                    <div class="tool-icon">🔗</div>
+                    <div class="tool-info">
+                        <span class="tool-name">Merge PDFs</span>
+                        <span class="tool-description">Combine multiple PDFs</span>
+                    </div>
+                </button>
+
+                <button class="tool-button priority-high" data-tool="split">
+                    <div class="tool-icon">✂️</div>
+                    <div class="tool-info">
+                        <span class="tool-name">Split PDF</span>
+                        <span class="tool-description">Extract specific pages</span>
+                    </div>
+                </button>
+
+                <button class="tool-button priority-high" data-tool="compress">
+                    <div class="tool-icon">🗜️</div>
+                    <div class="tool-info">
+                        <span class="tool-name">Compress PDF</span>
+                        <span class="tool-description">Reduce file size</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Advanced Tools (Phase 2) -->
+            <div class="tool-section">
+                <h2>Advanced Tools</h2>
+                
+                <button class="tool-button priority-medium" data-tool="addText" disabled>
+                    <div class="tool-icon">📝</div>
+                    <div class="tool-info">
+                        <span class="tool-name">Add Text</span>
+                        <span class="tool-description">Insert text annotations</span>
+                    </div>
+                    <span class="coming-soon">Soon</span>
+                </button>
+
+                <button class="tool-button priority-medium" data-tool="watermark" disabled>
+                    <div class="tool-icon">🏷️</div>
+                    <div class="tool-info">
+                        <span class="tool-name">Add Watermark</span>
+                        <span class="tool-description">Brand your documents</span>
+                    </div>
+                    <span class="coming-soon">Soon</span>
+                </button>
+
+                <button class="tool-button priority-medium" data-tool="rotate" disabled>
+                    <div class="tool-icon">🔄</div>
+                    <div class="tool-info">
+                        <span class="tool-name">Rotate Pages</span>
+                        <span class="tool-description">Fix page orientation</span>
+                    </div>
+                    <span class="coming-soon">Soon</span>
+                </button>
+            </div>
+
+            <!-- Utility Tools (Phase 3) -->
+            <div class="tool-section">
+                <h2>Utility Tools</h2>
+                
+                <button class="tool-button priority-low" data-tool="extractPages" disabled>
+                    <div class="tool-icon">📄</div>
+                    <div class="tool-info">
+                        <span class="tool-name">Extract Pages</span>
+                        <span class="tool-description">Save specific pages</span>
+                    </div>
+                    <span class="coming-soon">Soon</span>
+                </button>
+
+                <button class="tool-button priority-low" data-tool="extractText" disabled>
+                    <div class="tool-icon">📋</div>
+                    <div class="tool-info">
+                        <span class="tool-name">Extract Text</span>
+                        <span class="tool-description">Copy text content</span>
+                    </div>
+                    <span class="coming-soon">Soon</span>
+                </button>
+
+                <button class="tool-button priority-low" data-tool="pdfToImage" disabled>
+                    <div class="tool-icon">🖼️</div>
+                    <div class="tool-info">
+                        <span class="tool-name">PDF to Images</span>
+                        <span class="tool-description">Convert to PNG/JPG</span>
+                    </div>
+                    <span class="coming-soon">Soon</span>
+                </button>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="privacy-badge">
+                <span class="privacy-icon">🔒</span>
+                <span class="privacy-text">100% Local Processing</span>
+            </div>
+            <button class="settings-button" id="settingsBtn">⚙️ Settings</button>
+        </footer>
+
+        <!-- File Drop Zone (hidden by default) -->
+        <div class="drop-zone" id="dropZone" style="display: none;">
+            <div class="drop-content">
+                <div class="drop-icon">📁</div>
+                <p class="drop-text">Drop PDF files here</p>
+                <p class="drop-subtext">or click to select files</p>
+                <input type="file" id="fileInput" accept=".pdf" multiple style="display: none;">
+            </div>
+        </div>
+
+        <!-- Processing Overlay -->
+        <div class="processing-overlay" id="processingOverlay" style="display: none;">
+            <div class="processing-content">
+                <div class="spinner"></div>
+                <p class="processing-text">Processing PDF...</p>
+                <p class="processing-subtext">This may take a few moments</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
