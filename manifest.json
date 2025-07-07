@@ -1,19 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "LocalPDF - PDF Tools",
+  "name": "LocalPDF Smart Launcher",
   "version": "0.1.0",
-  "description": "Privacy-focused PDF tools: merge, split, compress, and more. All processing happens locally in your browser.",
+  "description": "Quick access to LocalPDF.online - seamlessly transfer PDF files to the privacy-focused PDF toolkit. Right-click any PDF to get started.",
   
   "permissions": [
-    "storage",
-    "downloads",
-    "activeTab",
-    "contextMenus"
+    "contextMenus",
+    "storage", 
+    "activeTab"
   ],
   
   "host_permissions": [
-    "*://*/*.pdf",
-    "https://cdnjs.cloudflare.com/*"
+    "https://localpdf.online/*"
   ],
   
   "background": {
@@ -22,7 +20,7 @@
   
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["*://*/*.pdf", "file://*/*.pdf", "*://*/*"],
       "js": ["content/content.js"],
       "run_at": "document_end"
     }
@@ -30,17 +28,12 @@
   
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "LocalPDF Tools"
+    "default_title": "LocalPDF Smart Launcher"
   },
   
-  "options_page": "options/options.html",
-  
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "lib/*.js"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png", 
+    "128": "assets/icons/icon128.png"
+  }
 }
