@@ -1,7 +1,13 @@
 /**
- * LocalPDF Extension - Background Service Worker
+ * LocalPDF Extension - Background Service Worker with Real PDF Processing
  * Handles PDF processing, file operations, and extension lifecycle
  */
+
+// Import PDF processor
+importScripts('lib/pdf-processor.js');
+
+// Global PDF processor instance
+let pdfProcessor = null;
 
 // Extension lifecycle and setup
 chrome.runtime.onInstalled.addListener((details) => {
@@ -18,6 +24,18 @@ chrome.runtime.onStartup.addListener(() => {
     console.log('[LocalPDF] Extension startup');
     initializeExtension();
 });
+
+/**
+ * Initialize PDF processor
+ */
+async function initializePDFProcessor() {
+    if (!pdfProcessor) {
+        pdfProcessor = new LocalPDFProcessor();
+        await pdfProcessor.initialize();
+        console.log('[LocalPDF] PDF processor ready');
+    }
+    return pdfProcessor;
+}
 
 /**
  * First time installation setup
@@ -40,14 +58,7 @@ async function setupFirstTimeInstallation() {
         setupContextMenus();
 
         // Show welcome notification
-        if (chrome.notifications) {
-            chrome.notifications.create({
-                type: 'basic',
-                iconUrl: chrome.runtime.getURL('assets/icons/icon48.png'),
-                title: 'LocalPDF Extension Installed!',
-                message: 'Click the extension icon to start using privacy-focused PDF tools.'
-            });
-        }
+        showNotification('Welcome', 'LocalPDF extension installed! Click the icon to start processing PDFs.');
 
         console.log('[LocalPDF] First time setup completed');
     } catch (error) {
@@ -81,6 +92,7 @@ async function initializeExtension() {
     try {
         setupContextMenus();
         setupMessageHandlers();
+        await initializePDFProcessor();
         console.log('[LocalPDF] Extension initialized');
     } catch (error) {
         console.error('[LocalPDF] Error initializing extension:', error);
@@ -91,9 +103,7 @@ async function initializeExtension() {
  * Setup context menus for PDF files
  */
 function setupContextMenus() {
-    // Remove existing menus
     chrome.contextMenus.removeAll(() => {
-        // Create main LocalPDF menu
         chrome.contextMenus.create({
             id: 'localpdf-main',
             title: 'LocalPDF Tools',
@@ -101,7 +111,6 @@ function setupContextMenus() {
             targetUrlPatterns: ['*://*/*.pdf']
         });
 
-        // Sub-menus for each tool
         chrome.contextMenus.create({
             id: 'localpdf-download-and-merge',
             parentId: 'localpdf-main',
@@ -150,8 +159,11 @@ function setupMessageHandlers() {
                 return true;
 
             case 'openPopup':
-                // Handle popup open request from content script
-                chrome.action.openPopup();
+                try {
+                    chrome.action.openPopup();
+                } catch (error) {
+                    console.log('[LocalPDF] Cannot open popup programmatically');
+                }
                 sendResponse({ success: true });
                 return true;
 
@@ -173,18 +185,60 @@ async function handleToolExecution(request, sendResponse) {
         // Show notification that processing is starting
         showNotification('Processing', `Starting ${tool} operation...`);
 
-        // For now, just simulate the process (placeholder)
+        // Initialize PDF processor
+        const processor = await initializePDFProcessor();
+
+        // Convert base64 files back to File objects
+        const processedFiles = await Promise.all(
+            files.map(async (fileData) => {
+                try {
+                    const response = await fetch(fileData.data);
+                    const blob = await response.blob();
+                    return new File([blob], fileData.name, { type: fileData.type });
+                } catch (error) {
+                    console.error('[LocalPDF] Error converting file:', error);
+                    throw new Error(`Failed to process file: ${fileData.name}`);
+                }
+            })
+        );
+
         let result;
         switch (tool) {
             case 'merge':
-                result = await simulateMergeTool(files);
+                result = await processor.mergePDFs(processedFiles);
+                
+                // Download the merged file
+                if (result.success) {
+                    await downloadFile(result.data, result.fileName);
+                }
                 break;
+
             case 'split':
-                result = await simulateSplitTool(files[0]);
+                result = await processor.splitPDF(processedFiles[0], { splitType: 'all' });
+                
+                // Download all split files
+                if (result.success) {
+                    await downloadMultipleFiles(result.files);
+                }
                 break;
+
             case 'compress':
-                result = await simulateCompressTool(files);
+                // Get compression quality from settings
+                const settings = await chrome.storage.sync.get(['localPDFSettings']);
+                const quality = settings.localPDFSettings?.compressionQuality || 'medium';
+                
+                result = { success: true, files: [] };
+                
+                // Compress each file individually
+                for (const file of processedFiles) {
+                    const compressResult = await processor.compressPDF(file, quality);
+                    if (compressResult.success) {
+                        result.files.push(compressResult);
+                        await downloadFile(compressResult.data, compressResult.fileName);
+                    }
+                }
                 break;
+
             default:
                 throw new Error(`Tool ${tool} not implemented yet`);
         }
@@ -207,11 +261,11 @@ async function handleToolExecutionOnPage(request, sendResponse) {
         const { tool, tabId, url } = request;
         console.log(`[LocalPDF] Executing ${tool} on page:`, url);
 
-        // Show notification
         showNotification('Processing', `Processing PDF with ${tool}...`);
 
-        // Simulate processing
-        await simulateProcessing(2000);
+        // For PDF pages, we would fetch the PDF and process it
+        // This is a placeholder for now
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         showNotification('Success', `${tool} completed!`);
         sendResponse({ success: true, result: { message: `${tool} completed on page` } });
@@ -255,8 +309,37 @@ async function handleDownloadAndProcess(url, tool) {
     try {
         showNotification('Processing', `Downloading and processing with ${tool}...`);
 
-        // Simulate download and processing
-        await simulateProcessing(3000);
+        // Download the PDF
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Failed to download PDF: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        const file = new File([blob], 'downloaded.pdf', { type: 'application/pdf' });
+
+        // Initialize PDF processor
+        const processor = await initializePDFProcessor();
+
+        let result;
+        switch (tool) {
+            case 'split':
+                result = await processor.splitPDF(file, { splitType: 'all' });
+                if (result.success) {
+                    await downloadMultipleFiles(result.files);
+                }
+                break;
+            case 'compress':
+                result = await processor.compressPDF(file, 'medium');
+                if (result.success) {
+                    await downloadFile(result.data, result.fileName);
+                }
+                break;
+            case 'merge':
+                // For merge, would need additional files - open popup instead
+                chrome.action.openPopup();
+                return;
+        }
 
         showNotification('Success', `${tool} completed successfully!`);
 
@@ -267,63 +350,66 @@ async function handleDownloadAndProcess(url, tool) {
 }
 
 /**
- * Placeholder PDF Processing Functions
- * These simulate the actual processing until PDF-lib is integrated
+ * File download utilities
  */
-
-async function simulateMergeTool(files) {
-    console.log(`[LocalPDF] Simulating merge of ${files.length} PDFs`);
-    await simulateProcessing(2000);
-    
-    // In real implementation, this would create and download the merged file
-    console.log('[LocalPDF] Merge simulation completed');
-    return { 
-        message: 'PDFs merged successfully (simulated)', 
-        fileCount: files.length,
-        outputFile: 'merged-document.pdf'
-    };
+async function downloadFile(data, fileName) {
+    try {
+        // Create blob and object URL
+        const blob = new Blob([data], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        
+        // Use Chrome downloads API
+        const downloadId = await chrome.downloads.download({
+            url: url,
+            filename: fileName,
+            saveAs: false
+        });
+        
+        console.log(`[LocalPDF] Download started: ${fileName} (ID: ${downloadId})`);
+        
+        // Clean up the blob URL after a delay
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 5000);
+        
+        return downloadId;
+        
+    } catch (error) {
+        console.error('[LocalPDF] Error downloading file:', error);
+        throw error;
+    }
 }
 
-async function simulateSplitTool(file) {
-    console.log(`[LocalPDF] Simulating split of ${file.name}`);
-    await simulateProcessing(1500);
-    
-    console.log('[LocalPDF] Split simulation completed');
-    return { 
-        message: 'PDF split successfully (simulated)', 
-        inputFile: file.name,
-        outputFiles: ['split-page-1.pdf', 'split-page-2.pdf', 'split-page-3.pdf']
-    };
-}
-
-async function simulateCompressTool(files) {
-    console.log(`[LocalPDF] Simulating compression of ${files.length} PDFs`);
-    await simulateProcessing(3000);
-    
-    console.log('[LocalPDF] Compression simulation completed');
-    return { 
-        message: 'PDFs compressed successfully (simulated)', 
-        fileCount: files.length,
-        compressionRatio: '45%'
-    };
+async function downloadMultipleFiles(files) {
+    try {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            // Add small delay between downloads
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            await downloadFile(file.data, file.fileName);
+        }
+    } catch (error) {
+        console.error('[LocalPDF] Error downloading multiple files:', error);
+        throw error;
+    }
 }
 
 /**
  * Utility Functions
  */
-
-async function simulateProcessing(duration) {
-    return new Promise(resolve => setTimeout(resolve, duration));
-}
-
 function showNotification(title, message) {
-    if (chrome.notifications) {
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: chrome.runtime.getURL('assets/icons/icon48.png') || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0idXJsKCNncmFkMSkiLz4KPGR0ZXh0IHg9IjI0IiB5PSIzMiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiPlA8L3RleHQ+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQxIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2N2VlYTtzdG9wLW9wYWNpdHk6MSIgLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojNzY0YmEyO3N0b3Atb3BhY2l0eToxIiAvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+Cjwvc3ZnPg==',
-            title: `LocalPDF - ${title}`,
-            message: message
-        });
+    try {
+        if (chrome.notifications) {
+            chrome.notifications.create({
+                type: 'basic',
+                title: `LocalPDF - ${title}`,
+                message: message
+            });
+        }
+    } catch (error) {
+        console.log('[LocalPDF] Notification error:', error);
     }
 }
 
