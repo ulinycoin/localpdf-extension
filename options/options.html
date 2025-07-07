@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalPDF Extension Settings</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <img src="../assets/icons/icon48.png" alt="LocalPDF" class="logo-icon">
+                <div class="logo-text">
+                    <h1>LocalPDF Settings</h1>
+                    <p class="version">Extension v0.1.0</p>
+                </div>
+            </div>
+        </header>
+
+        <main class="content">
+            <div class="settings-grid">
+                
+                <!-- General Settings -->
+                <section class="settings-section">
+                    <h2>🎛️ General Settings</h2>
+                    
+                    <div class="setting-item">
+                        <label for="theme-select">Theme</label>
+                        <select id="theme-select" class="setting-input">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="auto">Auto (System)</option>
+                        </select>
+                        <p class="setting-description">Choose your preferred color theme</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="auto-close" checked>
+                            <span class="toggle-slider"></span>
+                            Auto-close popup after processing
+                        </label>
+                        <p class="setting-description">Automatically close the popup when processing is complete</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="notifications" checked>
+                            <span class="toggle-slider"></span>
+                            Show notifications
+                        </label>
+                        <p class="setting-description">Display system notifications for completed operations</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="keyboard-shortcuts" checked>
+                            <span class="toggle-slider"></span>
+                            Enable keyboard shortcuts
+                        </label>
+                        <p class="setting-description">Use Ctrl+Shift+L to open LocalPDF tools on PDF pages</p>
+                    </div>
+                </section>
+
+                <!-- PDF Processing Settings -->
+                <section class="settings-section">
+                    <h2>📄 PDF Processing</h2>
+                    
+                    <div class="setting-item">
+                        <label for="compression-quality">Default Compression Quality</label>
+                        <select id="compression-quality" class="setting-input">
+                            <option value="low">Low (Smaller file, lower quality)</option>
+                            <option value="medium" selected>Medium (Balanced)</option>
+                            <option value="high">High (Larger file, better quality)</option>
+                        </select>
+                        <p class="setting-description">Default quality setting for PDF compression</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label for="split-naming">Split File Naming</label>
+                        <select id="split-naming" class="setting-input">
+                            <option value="page-numbers" selected>filename-page-1.pdf</option>
+                            <option value="sequential">filename-1.pdf</option>
+                            <option value="descriptive">filename-part-1.pdf</option>
+                        </select>
+                        <p class="setting-description">How to name files when splitting PDFs</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="preserve-metadata" checked>
+                            <span class="toggle-slider"></span>
+                            Preserve PDF metadata
+                        </label>
+                        <p class="setting-description">Keep document title, author, and creation date when processing</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label for="max-file-size">Maximum File Size (MB)</label>
+                        <input type="range" id="max-file-size" min="10" max="500" value="100" class="setting-range">
+                        <div class="range-value">
+                            <span id="max-file-size-value">100</span> MB
+                        </div>
+                        <p class="setting-description">Maximum file size for processing (larger files may be slower)</p>
+                    </div>
+                </section>
+
+                <!-- Privacy & Security -->
+                <section class="settings-section">
+                    <h2>🔒 Privacy & Security</h2>
+                    
+                    <div class="privacy-info">
+                        <div class="privacy-badge">
+                            <span class="privacy-icon">🛡️</span>
+                            <div class="privacy-text">
+                                <strong>100% Local Processing</strong>
+                                <p>All PDF processing happens locally in your browser. Your files never leave your device.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="clear-cache" checked>
+                            <span class="toggle-slider"></span>
+                            Auto-clear processing cache
+                        </label>
+                        <p class="setting-description">Automatically clear temporary files after processing</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="anonymize-pdfs">
+                            <span class="toggle-slider"></span>
+                            Remove metadata on export
+                        </label>
+                        <p class="setting-description">Strip all metadata (author, creation date, etc.) from processed PDFs</p>
+                    </div>
+                </section>
+
+                <!-- Advanced Settings -->
+                <section class="settings-section">
+                    <h2>⚙️ Advanced</h2>
+                    
+                    <div class="setting-item">
+                        <label for="worker-threads">Processing Threads</label>
+                        <select id="worker-threads" class="setting-input">
+                            <option value="auto" selected>Auto (Recommended)</option>
+                            <option value="1">1 Thread (Slower, lower CPU usage)</option>
+                            <option value="2">2 Threads</option>
+                            <option value="4">4 Threads (Faster, higher CPU usage)</option>
+                        </select>
+                        <p class="setting-description">Number of threads for PDF processing</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="debug-mode">
+                            <span class="toggle-slider"></span>
+                            Debug mode
+                        </label>
+                        <p class="setting-description">Enable detailed logging for troubleshooting</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-toggle">
+                            <input type="checkbox" id="experimental-features">
+                            <span class="toggle-slider"></span>
+                            Enable experimental features
+                        </label>
+                        <p class="setting-description">Try new features before they're officially released</p>
+                    </div>
+                </section>
+
+                <!-- Storage & Data -->
+                <section class="settings-section">
+                    <h2>💾 Storage & Data</h2>
+                    
+                    <div class="storage-info">
+                        <div class="storage-item">
+                            <span class="storage-label">Extension Data:</span>
+                            <span class="storage-value" id="storage-usage">Calculating...</span>
+                        </div>
+                        <div class="storage-item">
+                            <span class="storage-label">Cached Files:</span>
+                            <span class="storage-value" id="cache-size">0 files</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-actions">
+                        <button class="action-button secondary" id="clear-cache-btn">
+                            🗑️ Clear Cache
+                        </button>
+                        <button class="action-button secondary" id="export-settings-btn">
+                            📤 Export Settings
+                        </button>
+                        <button class="action-button secondary" id="import-settings-btn">
+                            📥 Import Settings
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About LocalPDF</h3>
+                    <p>Privacy-focused PDF tools that work entirely in your browser.</p>
+                    <a href="https://github.com/ulinycoin/localpdf-extension" target="_blank" class="footer-link">
+                        📖 View on GitHub
+                    </a>
+                </div>
+                
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <a href="https://github.com/ulinycoin/localpdf-extension/issues" target="_blank" class="footer-link">
+                        🐛 Report Bug
+                    </a>
+                    <a href="https://github.com/ulinycoin/localpdf-extension/discussions" target="_blank" class="footer-link">
+                        💬 Get Help
+                    </a>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                    <a href="#" class="footer-link">Terms of Service</a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 LocalPDF Extension. Made with ❤️ for privacy.</p>
+                <div class="footer-actions">
+                    <button class="action-button primary" id="save-settings">
+                        💾 Save Settings
+                    </button>
+                    <button class="action-button secondary" id="reset-settings">
+                        🔄 Reset to Defaults
+                    </button>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Success/Error Messages -->
+        <div class="toast" id="toast" style="display: none;">
+            <span class="toast-message" id="toast-message"></span>
+            <button class="toast-close" id="toast-close">×</button>
+        </div>
+
+        <!-- Import File Input -->
+        <input type="file" id="import-file-input" accept=".json" style="display: none;">
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>
