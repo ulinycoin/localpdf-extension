@@ -1,0 +1,66 @@
+{
+  "extensionName": {
+    "message": "LocalPDF",
+    "description": "Extension name"
+  },
+  "extensionDescription": {
+    "message": "Accès rapide aux outils LocalPDF - traitement PDF axé sur la confidentialité dans votre navigateur",
+    "description": "Extension description"
+  },
+  "searchPlaceholder": {
+    "message": "Rechercher des outils...",
+    "description": "Search input placeholder"
+  },
+  "toolMergePDF": {
+    "message": "Fusionner PDF",
+    "description": "Merge PDF tool"
+  },
+  "toolSplitPDF": {
+    "message": "Diviser PDF",
+    "description": "Split PDF tool"
+  },
+  "toolCompressPDF": {
+    "message": "Compresser PDF",
+    "description": "Compress PDF tool"
+  },
+  "toolProtectPDF": {
+    "message": "Protéger PDF",
+    "description": "Protect PDF tool"
+  },
+  "toolUnlockPDF": {
+    "message": "Déverrouiller PDF",
+    "description": "Unlock PDF tool"
+  },
+  "toolOCRPDF": {
+    "message": "OCR PDF",
+    "description": "OCR PDF tool"
+  },
+  "toolAddTextPDF": {
+    "message": "Ajouter du texte",
+    "description": "Add Text to PDF tool"
+  },
+  "toolWatermarkPDF": {
+    "message": "Filigrane",
+    "description": "Watermark PDF tool"
+  },
+  "toolRotatePDF": {
+    "message": "Pivoter PDF",
+    "description": "Rotate PDF tool"
+  },
+  "toolImageToPDF": {
+    "message": "Image vers PDF",
+    "description": "Image to PDF tool"
+  },
+  "toolPDFToImage": {
+    "message": "PDF vers image",
+    "description": "PDF to Image tool"
+  },
+  "toolEditPDF": {
+    "message": "Modifier PDF",
+    "description": "Edit PDF tool"
+  },
+  "viewAllTools": {
+    "message": "Voir tous les outils →",
+    "description": "Footer link to view all tools"
+  }
+}

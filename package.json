@@ -1,0 +1,36 @@
+{
+  "name": "localpdf-extension",
+  "version": "1.0.0",
+  "description": "Browser extension for quick access to LocalPDF tools - privacy-first PDF processing",
+  "main": "src/background/service-worker.js",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "package": "node scripts/package.js",
+    "watch": "node scripts/build.js --watch",
+    "clean": "rm -rf dist && rm -f localpdf-extension.zip",
+    "dev": "npm run clean && npm run build",
+    "release": "npm run clean && npm run build && npm run package"
+  },
+  "keywords": [
+    "pdf",
+    "browser-extension",
+    "chrome-extension",
+    "firefox-addon",
+    "pdf-tools",
+    "privacy",
+    "local-processing"
+  ],
+  "author": "LocalPDF",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ulinycoin/localpdf-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ulinycoin/localpdf-extension/issues"
+  },
+  "homepage": "https://localpdf.online",
+  "devDependencies": {
+    "archiver": "^7.0.1"
+  }
+}

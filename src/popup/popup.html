@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LocalPDF Tools</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <img src="../icons/icon-48.png" alt="LocalPDF" class="logo-icon">
+        <span class="logo-text" data-i18n="extensionName">LocalPDF</span>
+      </div>
+      <select id="languageSelector" class="language-selector">
+        <option value="en">EN</option>
+        <option value="ru">RU</option>
+        <option value="de">DE</option>
+        <option value="fr">FR</option>
+        <option value="es">ES</option>
+      </select>
+    </header>
+
+    <!-- Search -->
+    <div class="search-container">
+      <input
+        type="text"
+        id="searchInput"
+        class="search-input"
+        data-i18n-placeholder="searchPlaceholder"
+        placeholder="Search tools..."
+      >
+    </div>
+
+    <!-- Tools Grid -->
+    <div class="tools-grid" id="toolsGrid">
+      <!-- Tier 1: Top 6 most popular -->
+      <div class="tool-card" data-tool="merge-pdf" data-category="tier1">
+        <div class="tool-icon">🔗</div>
+        <div class="tool-name" data-i18n="toolMergePDF">Merge PDF</div>
+      </div>
+
+      <div class="tool-card" data-tool="split-pdf" data-category="tier1">
+        <div class="tool-icon">✂️</div>
+        <div class="tool-name" data-i18n="toolSplitPDF">Split PDF</div>
+      </div>
+
+      <div class="tool-card" data-tool="compress-pdf" data-category="tier1">
+        <div class="tool-icon">🗜️</div>
+        <div class="tool-name" data-i18n="toolCompressPDF">Compress PDF</div>
+      </div>
+
+      <div class="tool-card" data-tool="protect-pdf" data-category="tier1">
+        <div class="tool-icon">🔒</div>
+        <div class="tool-name" data-i18n="toolProtectPDF">Protect PDF</div>
+      </div>
+
+      <div class="tool-card" data-tool="unlock-pdf" data-category="tier1">
+        <div class="tool-icon">🔓</div>
+        <div class="tool-name" data-i18n="toolUnlockPDF">Unlock PDF</div>
+      </div>
+
+      <div class="tool-card" data-tool="ocr-pdf" data-category="tier1">
+        <div class="tool-icon">🔍</div>
+        <div class="tool-name" data-i18n="toolOCRPDF">OCR PDF</div>
+      </div>
+
+      <!-- Tier 2: Next 6 tools -->
+      <div class="tool-card" data-tool="add-text-pdf" data-category="tier2">
+        <div class="tool-icon">📝</div>
+        <div class="tool-name" data-i18n="toolAddTextPDF">Add Text</div>
+      </div>
+
+      <div class="tool-card" data-tool="watermark-pdf" data-category="tier2">
+        <div class="tool-icon">💧</div>
+        <div class="tool-name" data-i18n="toolWatermarkPDF">Watermark</div>
+      </div>
+
+      <div class="tool-card" data-tool="rotate-pdf" data-category="tier2">
+        <div class="tool-icon">🔄</div>
+        <div class="tool-name" data-i18n="toolRotatePDF">Rotate PDF</div>
+      </div>
+
+      <div class="tool-card" data-tool="image-to-pdf" data-category="tier2">
+        <div class="tool-icon">🖼️</div>
+        <div class="tool-name" data-i18n="toolImageToPDF">Image to PDF</div>
+      </div>
+
+      <div class="tool-card" data-tool="pdf-to-image" data-category="tier2">
+        <div class="tool-icon">📄</div>
+        <div class="tool-name" data-i18n="toolPDFToImage">PDF to Image</div>
+      </div>
+
+      <div class="tool-card" data-tool="edit-pdf" data-category="tier2">
+        <div class="tool-icon">✏️</div>
+        <div class="tool-name" data-i18n="toolEditPDF">Edit PDF</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <a href="https://localpdf.online" target="_blank" class="footer-link" data-i18n="viewAllTools">
+        View All Tools →
+      </a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+name: Release Extension
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build extension
+      run: npm run build
+
+    - name: Create package
+      run: npm run package
+
+    - name: Verify package
+      run: |
+        if [ ! -f "localpdf-extension.zip" ]; then
+          echo "Error: Package file not found"
+          exit 1
+        fi
+        echo "✓ Package created successfully"
+        ls -lh localpdf-extension.zip
+
+    - name: Upload package to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./localpdf-extension.zip
+        asset_name: localpdf-extension-${{ github.event.release.tag_name }}.zip
+        asset_content_type: application/zip
+
+    # Placeholder for future Chrome Web Store upload
+    # - name: Upload to Chrome Web Store
+    #   env:
+    #     CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+    #     CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+    #     CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+    #     CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+    #   run: |
+    #     # Upload logic here
+
+    # Placeholder for future Firefox Add-ons upload
+    # - name: Upload to Firefox Add-ons
+    #   env:
+    #     FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+    #     FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+    #     FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+    #   run: |
+    #     # Upload logic here
+
+    - name: Create summary
+      run: |
+        echo "## 🎉 Extension Release Built Successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Package Details" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **File:** localpdf-extension-${{ github.event.release.tag_name }}.zip" >> $GITHUB_STEP_SUMMARY
+        echo "- **Size:** $(du -h localpdf-extension.zip | cut -f1)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "1. Download the ZIP from release assets" >> $GITHUB_STEP_SUMMARY
+        echo "2. Upload to Chrome Web Store" >> $GITHUB_STEP_SUMMARY
+        echo "3. Upload to Firefox Add-ons" >> $GITHUB_STEP_SUMMARY

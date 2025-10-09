@@ -1,0 +1,66 @@
+{
+  "extensionName": {
+    "message": "LocalPDF",
+    "description": "Extension name"
+  },
+  "extensionDescription": {
+    "message": "Быстрый доступ к инструментам LocalPDF - обработка PDF с приоритетом конфиденциальности",
+    "description": "Extension description"
+  },
+  "searchPlaceholder": {
+    "message": "Поиск инструментов...",
+    "description": "Search input placeholder"
+  },
+  "toolMergePDF": {
+    "message": "Объединить PDF",
+    "description": "Merge PDF tool"
+  },
+  "toolSplitPDF": {
+    "message": "Разделить PDF",
+    "description": "Split PDF tool"
+  },
+  "toolCompressPDF": {
+    "message": "Сжать PDF",
+    "description": "Compress PDF tool"
+  },
+  "toolProtectPDF": {
+    "message": "Защитить PDF",
+    "description": "Protect PDF tool"
+  },
+  "toolUnlockPDF": {
+    "message": "Разблокировать PDF",
+    "description": "Unlock PDF tool"
+  },
+  "toolOCRPDF": {
+    "message": "OCR PDF",
+    "description": "OCR PDF tool"
+  },
+  "toolAddTextPDF": {
+    "message": "Добавить текст",
+    "description": "Add Text to PDF tool"
+  },
+  "toolWatermarkPDF": {
+    "message": "Водяной знак",
+    "description": "Watermark PDF tool"
+  },
+  "toolRotatePDF": {
+    "message": "Повернуть PDF",
+    "description": "Rotate PDF tool"
+  },
+  "toolImageToPDF": {
+    "message": "Изображение в PDF",
+    "description": "Image to PDF tool"
+  },
+  "toolPDFToImage": {
+    "message": "PDF в изображение",
+    "description": "PDF to Image tool"
+  },
+  "toolEditPDF": {
+    "message": "Редактировать PDF",
+    "description": "Edit PDF tool"
+  },
+  "viewAllTools": {
+    "message": "Все инструменты →",
+    "description": "Footer link to view all tools"
+  }
+}
