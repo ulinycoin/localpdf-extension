@@ -13,14 +13,14 @@ const TOOL_ROUTES = {
   'split-pdf': '/split-pdf',
   'compress-pdf': '/compress-pdf',
   'protect-pdf': '/protect-pdf',
-  'unlock-pdf': '/unlock-pdf',
+  'extract-text-pdf': '/extract-text-pdf',
   'ocr-pdf': '/ocr-pdf',
   'add-text-pdf': '/add-text-pdf',
   'watermark-pdf': '/watermark-pdf',
   'rotate-pdf': '/rotate-pdf',
   'image-to-pdf': '/image-to-pdf',
   'pdf-to-image': '/pdf-to-image',
-  'edit-pdf': '/edit-pdf'
+  'excel-to-pdf': '/excel-to-pdf'
 };
 
 // Current language
@@ -55,7 +55,7 @@ async function loadLanguage() {
 // Load translations from messages.json
 async function loadTranslations(lang) {
   try {
-    const response = await fetch(`../locales/${lang}/messages.json`);
+    const response = await fetch(`../_locales/${lang}/messages.json`);
     translations[lang] = await response.json();
     applyTranslations();
   } catch (error) {

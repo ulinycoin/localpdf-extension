@@ -4,63 +4,63 @@
     "description": "Extension name"
   },
   "extensionDescription": {
-    "message": "Acceso rápido a las herramientas de LocalPDF - procesamiento de PDF centrado en la privacidad en su navegador",
+    "message": "Accès rapide aux outils LocalPDF - traitement PDF axé sur la confidentialité dans votre navigateur",
     "description": "Extension description"
   },
   "searchPlaceholder": {
-    "message": "Buscar herramientas...",
+    "message": "Rechercher des outils...",
     "description": "Search input placeholder"
   },
   "toolMergePDF": {
-    "message": "Combinar PDF",
+    "message": "Fusionner PDF",
     "description": "Merge PDF tool"
   },
   "toolSplitPDF": {
-    "message": "Dividir PDF",
+    "message": "Diviser PDF",
     "description": "Split PDF tool"
   },
   "toolCompressPDF": {
-    "message": "Comprimir PDF",
+    "message": "Compresser PDF",
     "description": "Compress PDF tool"
   },
   "toolProtectPDF": {
-    "message": "Proteger PDF",
+    "message": "Protéger PDF",
     "description": "Protect PDF tool"
   },
-  "toolUnlockPDF": {
-    "message": "Desbloquear PDF",
-    "description": "Unlock PDF tool"
+  "toolExtractTextPDF": {
+    "message": "Extraire le texte",
+    "description": "Extract Text from PDF tool"
   },
   "toolOCRPDF": {
     "message": "OCR PDF",
     "description": "OCR PDF tool"
   },
   "toolAddTextPDF": {
-    "message": "Añadir texto",
+    "message": "Ajouter du texte",
     "description": "Add Text to PDF tool"
   },
   "toolWatermarkPDF": {
-    "message": "Marca de agua",
+    "message": "Filigrane",
     "description": "Watermark PDF tool"
   },
   "toolRotatePDF": {
-    "message": "Rotar PDF",
+    "message": "Pivoter PDF",
     "description": "Rotate PDF tool"
   },
   "toolImageToPDF": {
-    "message": "Imagen a PDF",
+    "message": "Image vers PDF",
     "description": "Image to PDF tool"
   },
   "toolPDFToImage": {
-    "message": "PDF a imagen",
+    "message": "PDF vers image",
     "description": "PDF to Image tool"
   },
-  "toolEditPDF": {
-    "message": "Editar PDF",
-    "description": "Edit PDF tool"
+  "toolExcelToPDF": {
+    "message": "Excel vers PDF",
+    "description": "Excel to PDF tool"
   },
   "viewAllTools": {
-    "message": "Ver todas las herramientas →",
+    "message": "Voir tous les outils →",
     "description": "Footer link to view all tools"
   }
 }

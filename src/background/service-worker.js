@@ -6,32 +6,27 @@ const CONTEXT_MENU_ITEMS = [
   {
     id: 'localpdf-open',
     title: 'Open with LocalPDF',
-    contexts: ['link'],
-    targetUrlPatterns: ['*://*/*.pdf', '*://*/*.PDF']
+    contexts: ['link']
   },
   {
     id: 'localpdf-merge',
     title: 'Merge PDFs',
-    contexts: ['link'],
-    targetUrlPatterns: ['*://*/*.pdf', '*://*/*.PDF']
+    contexts: ['link']
   },
   {
     id: 'localpdf-compress',
     title: 'Compress PDF',
-    contexts: ['link'],
-    targetUrlPatterns: ['*://*/*.pdf', '*://*/*.PDF']
+    contexts: ['link']
   },
   {
     id: 'localpdf-split',
     title: 'Split PDF',
-    contexts: ['link'],
-    targetUrlPatterns: ['*://*/*.pdf', '*://*/*.PDF']
+    contexts: ['link']
   },
   {
     id: 'localpdf-protect',
     title: 'Protect PDF',
-    contexts: ['link'],
-    targetUrlPatterns: ['*://*/*.pdf', '*://*/*.PDF']
+    contexts: ['link']
   }
 ];
 
@@ -63,8 +58,7 @@ function createContextMenus() {
       chrome.contextMenus.create({
         id: item.id,
         title: item.title,
-        contexts: item.contexts,
-        targetUrlPatterns: item.targetUrlPatterns
+        contexts: item.contexts
       });
     });
 
@@ -176,18 +170,5 @@ async function getUsageStats() {
   }
 }
 
-// Update context menu titles when language changes
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && changes.language) {
-    console.log('Language changed:', changes.language.newValue);
-    // Context menus would need to be recreated with new language
-    // For MVP, we keep English titles
-  }
-});
-
-// Keep service worker alive (optional, for debugging)
-chrome.runtime.onStartup.addListener(() => {
-  console.log('LocalPDF Extension started');
-});
-
+// Log when service worker loads
 console.log('LocalPDF Service Worker loaded');

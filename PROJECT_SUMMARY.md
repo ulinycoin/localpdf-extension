@@ -35,7 +35,7 @@ localpdf-extension/
 │   │   ├── icon-16.png              # Toolbar icon
 │   │   ├── icon-48.png              # Extension page icon
 │   │   └── icon-128.png             # Web store icon
-│   └── locales/                     # i18n translations
+│   └── _locales/                    # i18n translations (Chrome format)
 │       ├── en/messages.json         # English
 │       ├── ru/messages.json         # Russian
 │       ├── de/messages.json         # German

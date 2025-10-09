@@ -175,7 +175,7 @@ function openTool(tool) {
    };
    ```
 
-3. **Add translations** in all `src/locales/*/messages.json`:
+3. **Add translations** in all `src/_locales/*/messages.json`:
    ```json
    {
      "toolNewTool": {
@@ -191,15 +191,15 @@ function openTool(tool) {
 
 1. **Create locale directory:**
    ```bash
-   mkdir -p src/locales/it
+   mkdir -p src/_locales/it
    ```
 
 2. **Create messages.json:**
    ```bash
-   cp src/locales/en/messages.json src/locales/it/messages.json
+   cp src/_locales/en/messages.json src/_locales/it/messages.json
    ```
 
-3. **Translate all strings** in `src/locales/it/messages.json`
+3. **Translate all strings** in `src/_locales/it/messages.json`
 
 4. **Update popup.html** language selector:
    ```html

@@ -23,7 +23,8 @@
   },
   "permissions": [
     "contextMenus",
-    "notifications"
+    "notifications",
+    "storage"
   ],
   "host_permissions": [
     "https://localpdf.online/*"

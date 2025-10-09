@@ -4,63 +4,63 @@
     "description": "Extension name"
   },
   "extensionDescription": {
-    "message": "Быстрый доступ к инструментам LocalPDF - обработка PDF с приоритетом конфиденциальности",
+    "message": "Quick access to LocalPDF tools - privacy-first PDF processing in your browser",
     "description": "Extension description"
   },
   "searchPlaceholder": {
-    "message": "Поиск инструментов...",
+    "message": "Search tools...",
     "description": "Search input placeholder"
   },
   "toolMergePDF": {
-    "message": "Объединить PDF",
+    "message": "Merge PDF",
     "description": "Merge PDF tool"
   },
   "toolSplitPDF": {
-    "message": "Разделить PDF",
+    "message": "Split PDF",
     "description": "Split PDF tool"
   },
   "toolCompressPDF": {
-    "message": "Сжать PDF",
+    "message": "Compress PDF",
     "description": "Compress PDF tool"
   },
   "toolProtectPDF": {
-    "message": "Защитить PDF",
+    "message": "Protect PDF",
     "description": "Protect PDF tool"
   },
-  "toolUnlockPDF": {
-    "message": "Разблокировать PDF",
-    "description": "Unlock PDF tool"
+  "toolExtractTextPDF": {
+    "message": "Extract Text",
+    "description": "Extract Text from PDF tool"
   },
   "toolOCRPDF": {
     "message": "OCR PDF",
     "description": "OCR PDF tool"
   },
   "toolAddTextPDF": {
-    "message": "Добавить текст",
+    "message": "Add Text",
     "description": "Add Text to PDF tool"
   },
   "toolWatermarkPDF": {
-    "message": "Водяной знак",
+    "message": "Watermark",
     "description": "Watermark PDF tool"
   },
   "toolRotatePDF": {
-    "message": "Повернуть PDF",
+    "message": "Rotate PDF",
     "description": "Rotate PDF tool"
   },
   "toolImageToPDF": {
-    "message": "Изображение в PDF",
+    "message": "Image to PDF",
     "description": "Image to PDF tool"
   },
   "toolPDFToImage": {
-    "message": "PDF в изображение",
+    "message": "PDF to Image",
     "description": "PDF to Image tool"
   },
-  "toolEditPDF": {
-    "message": "Редактировать PDF",
-    "description": "Edit PDF tool"
+  "toolExcelToPDF": {
+    "message": "Excel to PDF",
+    "description": "Excel to PDF tool"
   },
   "viewAllTools": {
-    "message": "Все инструменты →",
+    "message": "View All Tools →",
     "description": "Footer link to view all tools"
   }
 }
