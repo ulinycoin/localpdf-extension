@@ -28,6 +28,7 @@ Privacy-first PDF tools directly in your browser. Files never leave your device.
    - Go to `chrome://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked" and select the `dist` folder.
+   - **IMPORTANT**: If you want to use the extension with local files, click "Details" and enable **"Allow access to file URLs"**.
 
 ## Development
 

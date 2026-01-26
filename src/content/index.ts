@@ -12,8 +12,14 @@ if (window.location.hostname.includes('localpdf.online')) {
         const fileUrl = params.get('url');
 
         if (fileUrl) {
-            // Wait for the app to render the file input
+            // Wait for the app to render the file input (up to 10 seconds)
+            const startTime = Date.now();
             const pollForInput = setInterval(() => {
+                if (Date.now() - startTime > 10000) {
+                    clearInterval(pollForInput);
+                    console.error('LocalPDF: Smart injection timed out waiting for file input');
+                    return;
+                }
                 const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
                 if (fileInput) {
                     clearInterval(pollForInput);
@@ -333,7 +339,7 @@ if (isPDF()) {
             </div>
         </div>
         <div class="sidebar-footer">
-            Private Sanctuary v4.0.0
+            Private Sanctuary v2.0.0
         </div>
     `;
 

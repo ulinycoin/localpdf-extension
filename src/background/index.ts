@@ -26,20 +26,57 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === 'fetchUrl' && request.url) {
-        console.log('LocalPDF: Proxy fetching URL:', request.url);
-        fetch(request.url)
-            .then(response => response.blob())
-            .then(blob => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    sendResponse({ success: true, data: reader.result });
-                };
-                reader.readAsDataURL(blob);
-            })
-            .catch(error => {
-                console.error('LocalPDF: Fetch failed:', error);
-                sendResponse({ success: false, error: error.message });
-            });
+        const url = request.url;
+        console.log('LocalPDF: Proxy fetching URL:', url);
+
+        // Security validation
+        const isHttp = url.startsWith('http://') || url.startsWith('https://');
+        const isFile = url.startsWith('file://');
+
+        if (!isHttp && !isFile) {
+            console.error('LocalPDF: Invalid protocol for fetch:', url);
+            sendResponse({ success: false, error: 'Invalid protocol' });
+            return;
+        }
+
+        const proceedWithFetch = () => {
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        sendResponse({ success: true, data: reader.result });
+                    };
+                    reader.readAsDataURL(blob);
+                })
+                .catch(error => {
+                    console.error('LocalPDF: Fetch failed:', error);
+                    sendResponse({ success: false, error: error.message });
+                });
+        };
+
+        const hasPdfSuffix = url.toLowerCase().split('?')[0].endsWith('.pdf');
+
+        if (hasPdfSuffix || isFile) {
+            proceedWithFetch();
+        } else {
+            // Fallback: Check Content-Type via HEAD request
+            fetch(url, { method: 'HEAD' })
+                .then(response => {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/pdf')) {
+                        proceedWithFetch();
+                    } else {
+                        console.error('LocalPDF: URL does not appear to be a PDF:', url, 'Content-Type:', contentType);
+                        sendResponse({ success: false, error: 'Not a PDF document' });
+                    }
+                })
+                .catch(error => {
+                    console.error('LocalPDF: HEAD request failed:', error);
+                    sendResponse({ success: false, error: 'Could not verify PDF content' });
+                });
+        }
+
         return true; // Keep channel open for async response
     }
 });
