@@ -3,63 +3,92 @@ console.log('LocalPDF: Content script loaded');
 
 // Smart Injection: If we are on LocalPDF app and came from extension,
 // find the hidden file input and inject the document without app's help.
-if (window.location.hostname.includes('localpdf.online')) {
-    const hash = window.location.hash.slice(1);
-    if (hash.includes('url=') && hash.includes('from=extension')) {
-        console.log('LocalPDF: Extension detected app with ingestion URL. Starting smart injection...');
+if (window.location.hostname.includes('localpdf.online') || window.location.hostname.includes('localhost')) {
+    const handleInjection = () => {
+        const hash = window.location.hash.slice(1);
+        if (hash.includes('url=') && hash.includes('from=extension')) {
+            console.log('LocalPDF: Extension detected app with ingestion URL. Starting smart injection...');
 
-        const params = new URLSearchParams(hash.split('?')[1]);
-        const fileUrl = params.get('url');
+            // More robust param extraction from hash
+            const queryString = hash.includes('?') ? hash.split('?')[1] : hash;
+            const params = new URLSearchParams(queryString);
+            const fileUrl = params.get('url');
 
-        if (fileUrl) {
-            // Wait for the app to render the file input (up to 10 seconds)
-            const startTime = Date.now();
-            const pollForInput = setInterval(() => {
-                if (Date.now() - startTime > 10000) {
-                    clearInterval(pollForInput);
-                    console.error('LocalPDF: Smart injection timed out waiting for file input');
-                    return;
-                }
-                const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-                if (fileInput) {
-                    clearInterval(pollForInput);
-                    console.log('LocalPDF: File input found. Fetching document...');
+            if (fileUrl) {
+                console.log('LocalPDF: Target file URL found:', fileUrl);
 
-                    chrome.runtime.sendMessage({ action: 'fetchUrl', url: fileUrl }, async (response) => {
-                        if (response && response.success) {
-                            console.log('LocalPDF: Proxy fetch successful. Injecting file...');
+                // Fetch the file as soon as possible via background script
+                chrome.runtime.sendMessage({ action: 'fetchUrl', url: fileUrl }, async (response) => {
+                    if (response && response.success) {
+                        console.log('LocalPDF: Proxy fetch successful. Waiting for file input to appear...');
 
+                        try {
+                            const res = await fetch(response.data);
+                            const blob = await res.blob();
+
+                            let fileName = 'document.pdf';
                             try {
-                                const res = await fetch(response.data);
-                                const blob = await res.blob();
+                                const urlPath = new URL(fileUrl).pathname;
+                                const encodedName = urlPath.split('/').pop() || 'document.pdf';
+                                // Decode URL characters and normalize to NFC (standard for most systems/browsers)
+                                fileName = decodeURIComponent(encodedName).normalize('NFC');
 
-                                let fileName = 'document.pdf';
-                                try {
-                                    fileName = new URL(fileUrl).pathname.split('/').pop() || 'document.pdf';
-                                    if (!fileName.toLowerCase().endsWith('.pdf')) fileName += '.pdf';
-                                } catch (e) { }
-
-                                const file = new File([blob], fileName, { type: 'application/pdf' });
-
-                                const dataTransfer = new DataTransfer();
-                                dataTransfer.items.add(file);
-                                fileInput.files = dataTransfer.files;
-
-                                fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-                                console.log('LocalPDF: File injected successfully!');
-
-                                window.history.replaceState(null, '', window.location.hash.split('?')[0]);
+                                if (!fileName.toLowerCase().endsWith('.pdf')) fileName += '.pdf';
+                                console.log('LocalPDF: Extracted filename:', fileName);
                             } catch (e) {
-                                console.error('LocalPDF: Injection failed during conversion', e);
+                                console.warn('LocalPDF: Failed to extract/decode filename, using default.', e);
                             }
-                        } else {
-                            console.error('LocalPDF: Proxy fetch failed for injection', response?.error);
+
+                            const file = new File([blob], fileName, { type: 'application/pdf' });
+
+                            // Poll for the file input
+                            let attempts = 0;
+                            const maxAttempts = 20; // 10 seconds total (500ms intervals)
+
+                            const pollForInput = setInterval(() => {
+                                attempts++;
+
+                                // Re-query the input every time to ensure we have the latest/attached element
+                                const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+                                if (fileInput) {
+                                    clearInterval(pollForInput);
+                                    console.log('LocalPDF: File input found. Injecting file content...');
+
+                                    const dataTransfer = new DataTransfer();
+                                    dataTransfer.items.add(file);
+                                    fileInput.files = dataTransfer.files;
+
+                                    // Dispatch multiple events to ensure React and other frameworks catch the change
+                                    fileInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+                                    console.log('LocalPDF: File injected successfully!');
+
+                                    // Clean up hash to prevent double-injection
+                                    const cleanHash = window.location.hash.includes('?')
+                                        ? window.location.hash.split('?')[0]
+                                        : window.location.hash;
+                                    window.history.replaceState(null, '', cleanHash);
+                                } else if (attempts >= maxAttempts) {
+                                    clearInterval(pollForInput);
+                                    console.error('LocalPDF: Smart injection timed out waiting for file input');
+                                }
+                            }, 500);
+                        } catch (e) {
+                            console.error('LocalPDF: Injection failed during conversion', e);
                         }
-                    });
-                }
-            }, 500);
+                    } else {
+                        console.error('LocalPDF: Proxy fetch failed for injection', response?.error);
+                    }
+                });
+            }
         }
-    }
+    };
+
+    // Run on initial load and on hash changes
+    handleInjection();
+    window.addEventListener('hashchange', handleInjection);
 }
 
 const isPDF = () => {
@@ -88,57 +117,34 @@ if (isPDF()) {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            height: 58px;
-            padding: 0 32px;
-            background: rgba(10, 10, 15, 0.6);
-            backdrop-filter: blur(25px) saturate(180%);
-            -webkit-backdrop-filter: blur(25px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 29px;
+            width: 80px;
+            height: 80px;
             cursor: move;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 
-                        inset 0 0 1px 1px rgba(255, 255, 255, 0.05);
             z-index: 1000000;
             transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
             user-select: none;
             animation: fab-pulse 2.5s infinite ease-in-out;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
-        .fab-main {
-            font-size: 20px;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: -0.5px;
-            background: linear-gradient(to bottom, #fff, #ddd);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .fab-sub {
-            font-size: 11px;
-            font-weight: 700;
-            color: #58a6ff;
-            letter-spacing: 2.2px;
-            text-transform: uppercase;
-            margin-top: 4px;
-            line-height: 1;
-            text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+        .localpdf-fab svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.4));
+            transition: transform 0.3s ease;
         }
         @keyframes fab-pulse {
-            0% { transform: scale(1); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4); }
-            50% { transform: scale(1.02); box-shadow: 0 12px 50px rgba(0, 0, 0, 0.5), 0 0 15px rgba(88, 166, 255, 0.15); }
-            100% { transform: scale(1); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4); }
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
         .localpdf-fab:hover {
-            transform: scale(1.08) translateY(-4px) !important;
-            background: rgba(20, 20, 25, 0.75);
-            border-color: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 25px rgba(88, 166, 255, 0.3);
+            transform: translateY(-4px) !important;
             animation-play-state: paused;
+        }
+        .localpdf-fab:hover svg {
+            transform: scale(1.1);
         }
         .localpdf-fab.active {
             transform: scale(0);
@@ -347,8 +353,90 @@ if (isPDF()) {
     const fab = document.createElement('div');
     fab.className = 'localpdf-fab';
     fab.innerHTML = `
-        <span class="fab-main">LocalPDF</span>
-        <span class="fab-sub">SANCTUARY</span>
+<svg width="80" height="80" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="lens" cx="38%" cy="32%" r="78%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="42%" stop-color="#B5ECFF" stop-opacity="0.12"/>
+      <stop offset="70%" stop-color="#2C6BFF" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#050915" stop-opacity="0.40"/>
+    </radialGradient>
+
+    <radialGradient id="rim" cx="40%" cy="35%" r="85%">
+      <stop offset="70%" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="82%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#7AD6FF" stop-opacity="0.22"/>
+    </radialGradient>
+
+    <radialGradient id="innerDepth" cx="50%" cy="55%" r="80%">
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.28"/>
+    </radialGradient>
+
+    <radialGradient id="glow" cx="38%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#7FE3FF" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#3D7BFF" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#6FDFFF" flood-opacity="0.20"/>
+    </filter>
+
+    <filter id="noise" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="
+        1 0 0 0 0
+        0 1 0 0 0
+        0 0 1 0 0
+        0 0 0 0.06 0"/>
+    </filter>
+
+    <clipPath id="clip">
+      <circle cx="64" cy="64" r="54"/>
+    </clipPath>
+  </defs>
+
+  <!-- Glow -->
+  <circle cx="64" cy="64" r="60" fill="url(#glow)" opacity="0.9"/>
+
+  <!-- Glass orb -->
+  <g filter="url(#shadow)">
+    <circle cx="64" cy="64" r="54" fill="url(#lens)"/>
+    <circle cx="64" cy="64" r="54" fill="url(#rim)"/>
+    <circle cx="64" cy="64" r="54" fill="url(#innerDepth)"/>
+  </g>
+
+  <!-- Internal reflections -->
+  <ellipse cx="46" cy="42" rx="18" ry="14" fill="#FFFFFF" opacity="0.18"/>
+  <ellipse cx="40" cy="36" rx="8" ry="6" fill="#FFFFFF" opacity="0.18"/>
+
+  <!-- Noise -->
+  <g clip-path="url(#clip)" opacity="0.65">
+    <rect x="0" y="0" width="128" height="128" filter="url(#noise)"/>
+  </g>
+
+  <!-- Text -->
+  <g text-anchor="middle"
+     font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial">
+    <text x="64" y="62"
+          font-size="17"
+          font-weight="700"
+          fill="#FFFFFF"
+          opacity="0.96">
+      LocalPDF
+    </text>
+    <text x="64" y="77"
+          font-size="11"
+          font-weight="700"
+          letter-spacing="1"
+          fill="#7CCBFF"
+          opacity="0.95">
+      SANCTUARY
+    </text>
+  </g>
+</svg>
     `;
 
     // Append elements first so we can find them in the shadow DOM
