@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "package": "npm run build && zip -r localpdf-extension-v2.0.0.zip dist",
         "preview": "vite preview"
     },
     "devDependencies": {

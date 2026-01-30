@@ -2,6 +2,8 @@
     "manifest_version": 3,
     "name": "LocalPDF - Private PDF Companion",
     "version": "2.0.0",
+    "author": "LocalPDF Team",
+    "homepage_url": "https://localpdf.online",
     "description": "Privacy-first PDF tools directly in your browser.",
     "permissions": [
         "activeTab",
