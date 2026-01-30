@@ -4,9 +4,54 @@ console.log('LocalPDF: Content script loaded');
 // Smart Injection: If we are on LocalPDF app and came from extension,
 // find the hidden file input and inject the document without app's help.
 if (window.location.hostname.includes('localpdf.online') || window.location.hostname.includes('localhost')) {
+    let injectionInProgress = false;
+
+    const fetchUrlViaBackground = (url: string) => {
+        return new Promise<{ success: boolean; data?: string; error?: string }>((resolve) => {
+            chrome.runtime.sendMessage({ action: 'fetchUrl', url }, (response) => resolve(response));
+        });
+    };
+
+    const waitForFileInput = (timeoutMs = 60000) => {
+        return new Promise<HTMLInputElement | null>((resolve) => {
+            const findInput = () => {
+                return document.querySelector('input[type="file"]#file-input') as HTMLInputElement ||
+                    document.querySelector('input[type="file"]') as HTMLInputElement ||
+                    null;
+            };
+
+            const existing = findInput();
+            if (existing) {
+                resolve(existing);
+                return;
+            }
+
+            let settled = false;
+            const observer = new MutationObserver(() => {
+                const input = findInput();
+                if (input && !settled) {
+                    settled = true;
+                    observer.disconnect();
+                    resolve(input);
+                }
+            });
+
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+
+            setTimeout(() => {
+                if (!settled) {
+                    settled = true;
+                    observer.disconnect();
+                    resolve(null);
+                }
+            }, timeoutMs);
+        });
+    };
+
     const handleInjection = () => {
         const hash = window.location.hash.slice(1);
         if (hash.includes('url=') && hash.includes('from=extension')) {
+            if (injectionInProgress) return;
             console.log('LocalPDF: Extension detected app with ingestion URL. Starting smart injection...');
 
             // More robust param extraction from hash
@@ -15,10 +60,18 @@ if (window.location.hostname.includes('localpdf.online') || window.location.host
             const fileUrl = params.get('url');
 
             if (fileUrl) {
+                injectionInProgress = true;
                 console.log('LocalPDF: Target file URL found:', fileUrl);
 
-                // Fetch the file as soon as possible via background script
-                chrome.runtime.sendMessage({ action: 'fetchUrl', url: fileUrl }, async (response) => {
+                // Fetch the file as soon as possible via background script (with retry)
+                (async () => {
+                    let response: { success: boolean; data?: string; error?: string } | undefined;
+                    for (let attempt = 1; attempt <= 3; attempt++) {
+                        response = await fetchUrlViaBackground(fileUrl);
+                        if (response && response.success) break;
+                        await new Promise(r => setTimeout(r, 500 * attempt));
+                    }
+
                     if (response && response.success) {
                         console.log('LocalPDF: Proxy fetch successful. Waiting for file input to appear...');
 
@@ -41,46 +94,37 @@ if (window.location.hostname.includes('localpdf.online') || window.location.host
 
                             const file = new File([blob], fileName, { type: 'application/pdf' });
 
-                            // Poll for the file input
-                            let attempts = 0;
-                            const maxAttempts = 20; // 10 seconds total (500ms intervals)
+                            const fileInput = await waitForFileInput();
+                            if (!fileInput) {
+                                console.error('LocalPDF: Smart injection timed out waiting for file input');
+                                return;
+                            }
 
-                            const pollForInput = setInterval(() => {
-                                attempts++;
+                            console.log('LocalPDF: File input found. Injecting file content...');
 
-                                // Re-query the input every time to ensure we have the latest/attached element
-                                const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                            const dataTransfer = new DataTransfer();
+                            dataTransfer.items.add(file);
+                            fileInput.files = dataTransfer.files;
 
-                                if (fileInput) {
-                                    clearInterval(pollForInput);
-                                    console.log('LocalPDF: File input found. Injecting file content...');
+                            // Dispatch multiple events to ensure React and other frameworks catch the change
+                            fileInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-                                    const dataTransfer = new DataTransfer();
-                                    dataTransfer.items.add(file);
-                                    fileInput.files = dataTransfer.files;
+                            console.log('LocalPDF: File injected successfully!');
 
-                                    // Dispatch multiple events to ensure React and other frameworks catch the change
-                                    fileInput.dispatchEvent(new Event('input', { bubbles: true }));
-                                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-                                    console.log('LocalPDF: File injected successfully!');
-
-                                    // Clean up hash to prevent double-injection
-                                    const cleanHash = window.location.hash.includes('?')
-                                        ? window.location.hash.split('?')[0]
-                                        : window.location.hash;
-                                    window.history.replaceState(null, '', cleanHash);
-                                } else if (attempts >= maxAttempts) {
-                                    clearInterval(pollForInput);
-                                    console.error('LocalPDF: Smart injection timed out waiting for file input');
-                                }
-                            }, 500);
+                            // Clean up hash to prevent double-injection
+                            const cleanHash = window.location.hash.includes('?')
+                                ? window.location.hash.split('?')[0]
+                                : window.location.hash;
+                            window.history.replaceState(null, '', cleanHash);
                         } catch (e) {
                             console.error('LocalPDF: Injection failed during conversion', e);
                         }
                     } else {
                         console.error('LocalPDF: Proxy fetch failed for injection', response?.error);
                     }
+                })().finally(() => {
+                    injectionInProgress = false;
                 });
             }
         }

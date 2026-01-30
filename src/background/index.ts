@@ -57,9 +57,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         const hasPdfSuffix = url.toLowerCase().split('?')[0].endsWith('.pdf');
 
-        if (hasPdfSuffix || isFile) {
-            proceedWithFetch();
-        } else {
+        const verifyAndFetch = () => {
+            if (hasPdfSuffix || isFile) {
+                proceedWithFetch();
+                return;
+            }
+
             // Fallback: Check Content-Type via HEAD request
             fetch(url, { method: 'HEAD' })
                 .then(response => {
@@ -75,6 +78,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     console.error('LocalPDF: HEAD request failed:', error);
                     sendResponse({ success: false, error: 'Could not verify PDF content' });
                 });
+        };
+
+        if (isFile && chrome.extension?.isAllowedFileSchemeAccess) {
+            chrome.extension.isAllowedFileSchemeAccess((allowed) => {
+                if (!allowed) {
+                    console.error('LocalPDF: File scheme access is disabled for this extension');
+                    sendResponse({ success: false, error: 'File scheme access disabled' });
+                    return;
+                }
+
+                verifyAndFetch();
+            });
+        } else {
+            verifyAndFetch();
         }
 
         return true; // Keep channel open for async response
